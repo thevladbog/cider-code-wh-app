@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+/* Улучшаем стили фокуса для доступности */
+:focus {
+  outline: 2px solid transparent;
+}
+
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Отключаем контур для модальных окон при сохранении доступности */
+.modal:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+.modal:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+/* Предотвращаем смещения при активации фокуса */
+button:focus {
+  outline: 2px solid transparent;
+}
+
+button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  transform: none !important;
+}
+
+.modal:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+/* Предотвращаем смещения при активации фокуса */
+button:focus {
+  outline: 2px solid transparent;
+}
+
+button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  transform: none !important;
+}
+
+@layer components {
+  /* Стиль для overlay модального окна */
+  .modal-overlay {
+    @apply fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm;
+    background-color: rgba(0, 0, 0, 0.6);
+    touch-action: none; /* Предотвращает прокрутку основного содержимого */
+  }
+
+  /* Стиль для модального окна */
+  .modal {
+    @apply rounded-xl shadow-xl p-6 w-full max-w-lg bg-white dark:bg-gray-800 transition-colors;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
+  }
+
+  /* Стиль для кнопок виртуальной клавиатуры с улучшенной реакцией на нажатие */
+  .numpad-button {
+    @apply rounded-xl text-2xl font-bold flex items-center justify-center bg-gray-100 dark:bg-gray-700 dark:text-white shadow-sm transition-colors;
+    height: 64px; /* Фиксированная высота для улучшенного взаимодействия */
+    touch-action: manipulation; /* Улучшает реакцию на нажатие */
+    user-select: none; /* Предотвращает выделение текста */
+    -webkit-tap-highlight-color: transparent; /* Убирает подсветку при нажатии на iOS */
+  }
+  
+  .numpad-button:active {
+    @apply bg-gray-300 shadow-inner transform scale-95;
+    transition: transform 0.1s ease-in-out;
+  }
+
+  /* Большие кнопки для сенсорных экранов */
+  .touch-button {
+    @apply rounded-lg p-4 flex items-center justify-center;
+    min-height: 48px;
+    min-width: 48px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
