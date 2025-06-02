@@ -1,0 +1,42 @@
+name: Security and Dependencies Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Запуск каждый день в полночь
+  workflow_dispatch:  # Позволяет запускать вручную
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run npm audit
+      run: npm audit
+      continue-on-error: true
+      
+    - name: Check for outdated dependencies
+      run: npm outdated
+      continue-on-error: true
+      
+    # Проверка обновлений для electron-forge и electron
+    - name: Check for Electron updates
+      run: |
+        echo "Current Electron version:"
+        npm list electron
+        echo "Latest Electron version:"
+        npm view electron version
+        echo ""
+        echo "Current Electron-forge packages:"
+        npm list @electron-forge/cli
+        echo "Latest Electron-forge version:"
+        npm view @electron-forge/cli version

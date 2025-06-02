@@ -1,0 +1,138 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    branches:
+      - 'release-stable'
+      - 'release-beta'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.semver.outputs.version }}
+      release_type: ${{ steps.branch-check.outputs.release_type }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Determine release type
+        id: branch-check
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/release-stable" ]]; then
+            echo "release_type=stable" >> $GITHUB_OUTPUT
+          else
+            echo "release_type=beta" >> $GITHUB_OUTPUT
+          fi
+      - name: Generate semantic version
+        id: semver
+        uses: paulhatch/semantic-version@v5.3.0
+        with:
+          branch: ${{ github.ref }}
+          tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
+          version_format: "${major}.${minor}.${patch}${{ steps.branch-check.outputs.release_type == 'beta' && '-beta.${increment}' || '' }}"
+          bump_each_commit: true
+          
+      - name: Update package.json version
+        run: npm version ${{ steps.semver.outputs.version }} --no-git-tag-version
+      
+      - name: Upload updated package.json
+        uses: actions/upload-artifact@v3
+        with:
+          name: package-json
+          path: package.json
+
+  build:
+    needs: version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+      
+      - name: Download updated package.json
+        uses: actions/download-artifact@v3
+        with:
+          name: package-json
+          
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxtst-dev libpng++-dev
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build/Make Electron app
+        run: npm run make
+        
+      - name: Upload Windows artifacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-artifacts
+          path: |
+            out/make/squirrel.windows/x64/*.exe
+            out/make/zip/win32/x64/*.zip
+            
+      - name: Upload Linux artifacts
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-artifacts
+          path: |
+            out/make/deb/x64/*.deb
+            out/make/rpm/x64/*.rpm
+            out/make/zip/linux/x64/*.zip
+            
+      - name: Upload macOS artifacts
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-artifacts
+          path: |
+            out/make/zip/darwin/x64/*.zip
+            
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create Tag
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/v${{ needs.version.outputs.new_version }}',
+              sha: context.sha
+            })
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.version.outputs.new_version }}
+          name: Release v${{ needs.version.outputs.new_version }} ${{ needs.version.outputs.release_type == 'beta' && '(Beta)' || '' }}
+          files: |
+            *-artifacts/**/*
+          draft: false
+          prerelease: ${{ needs.version.outputs.release_type == 'beta' }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

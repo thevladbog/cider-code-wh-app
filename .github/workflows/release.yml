@@ -1,0 +1,118 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    branches:
+      - 'release-stable'
+      - 'release-beta'
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxtst-dev libpng++-dev
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Determine build type
+        id: build-type
+        run: |
+          BRANCH_NAME="${{ github.ref }}"
+          if [[ $BRANCH_NAME == "refs/heads/release-stable" ]]; then
+            echo "BUILD_TYPE=release" >> $GITHUB_OUTPUT
+          else
+            echo "BUILD_TYPE=beta" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build application
+        run: npm run build:${{ steps.build-type.outputs.BUILD_TYPE }}
+        
+      - name: Extract version from package.json
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+      
+      - name: Upload Windows artifacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-artifacts
+          path: |
+            out/make/squirrel.windows/x64/*.exe
+            out/make/zip/win32/x64/*.zip
+          
+      - name: Upload Linux artifacts
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-artifacts
+          path: |
+            out/make/deb/x64/*.deb
+            out/make/rpm/x64/*.rpm
+            out/make/zip/linux/x64/*.zip
+          
+      - name: Upload macOS artifacts
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-artifacts
+          path: |
+            out/make/zip/darwin/x64/*.zip
+  
+  create-release:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        
+      - name: Extract version from package.json
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+        
+      - name: Determine release type
+        id: release-type
+        run: |
+          BRANCH_NAME="${{ github.ref }}"
+          VERSION="${{ steps.package-version.outputs.current-version }}"
+          if [[ $BRANCH_NAME == "refs/heads/release-stable" ]]; then
+            echo "RELEASE_TYPE=stable" >> $GITHUB_OUTPUT
+            echo "PRERELEASE=false" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=Release v$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "RELEASE_TYPE=beta" >> $GITHUB_OUTPUT
+            echo "PRERELEASE=true" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=Beta v$VERSION" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Create Release and Tag
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.package-version.outputs.current-version }}
+          name: ${{ steps.release-type.outputs.RELEASE_NAME }}
+          artifacts: "*-artifacts/**/*"
+          draft: false
+          prerelease: ${{ steps.release-type.outputs.PRERELEASE == 'true' }}
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
