@@ -4,7 +4,7 @@ import type { PrinterConfig } from '../utils/serialport-helper';
 declare global {
   interface Window {
     electronAPI?: {
-      printLabels?: (options: any) => Promise<boolean>;
+      printLabels?: (options: import('../utils/print').PrintLabelsOptions) => Promise<boolean>;
       getPrinters?: () => Promise<PrinterConfig[]>;
       savePrinterConfig?: (config: PrinterConfig[]) => Promise<{ success: boolean; message: string; loadedConfig?: PrinterConfig[] }>;
       testPrinterConnection?: (printerConfig: PrinterConfig) => Promise<{ success: boolean, message: string }>;

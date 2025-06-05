@@ -24,18 +24,25 @@ describe('PrinterSettings Component (network printers)', () => {
     render(<PrinterSettings isOpen={true} onClose={vi.fn()} />);
     const user = userEvent.setup();
     await act(async () => {
-      await user.click(screen.getByText('Добавить принтер'));
+      await user.click(screen.getByText('Добавить новый принтер'));
     });
     const nameInput = await screen.findByPlaceholderText('Название принтера');
     const networkRadio = await screen.findByLabelText('Сеть');
+    const ipInput = await screen.findByPlaceholderText('IP адрес');
     await act(async () => {
       await user.type(nameInput, 'Test Network Printer');
       await user.click(networkRadio);
+      await user.type(ipInput, '192.168.1.123');
+      await user.click(screen.getByText('Добавить'));
     });
-    // Ждём появления кнопки теста
-    await waitFor(() => expect(screen.getByText('Тест')).toBeInTheDocument());
+    // Ждём появления нового принтера в списке (форма добавления скрыта)
+    await waitFor(() => expect(screen.getByDisplayValue('Test Network Printer')).toBeInTheDocument());
+    // Теперь ищем кнопку "Тест" по роли и имени
+    const testButtons = screen.getAllByRole('button', { name: /тест/i });
+    const lastTestButton = testButtons[testButtons.length - 1];
+    expect(lastTestButton).toBeTruthy();
     await act(async () => {
-      await user.click(screen.getByText('Тест'));
+      await user.click(lastTestButton);
     });
     await waitFor(async () => {
       expect(await screen.findByText('Connection successful')).toBeInTheDocument();
@@ -46,13 +53,15 @@ describe('PrinterSettings Component (network printers)', () => {
     render(<PrinterSettings isOpen={true} onClose={vi.fn()} />);
     const user = userEvent.setup();
     await act(async () => {
-      await user.click(screen.getByText('Добавить принтер'));
+      await user.click(screen.getByText('Добавить новый принтер'));
     });
     const nameInput = await screen.findByPlaceholderText('Название принтера');
     const networkRadio = await screen.findByLabelText('Сеть');
+    const ipInput = await screen.findByPlaceholderText('IP адрес');
     await act(async () => {
       await user.type(nameInput, 'Test Network Printer');
       await user.click(networkRadio);
+      await user.type(ipInput, '192.168.1.123');
       await user.click(screen.getByText('Добавить'));
     });
     // Новый принтер появляется в списке

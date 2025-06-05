@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useStore } from '../store';
 import { CalendarIcon, ArchiveBoxIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useWindowSize } from '../hooks/useWindowSize';
+import ModalOrderSearch from './ModalOrderSearch';
 
 const MainScreen: React.FC = () => {
   const { 
@@ -33,6 +34,17 @@ const MainScreen: React.FC = () => {
 
   const displayedOrders = showArchive ? archivedOrders : orders;
   
+  const [showOrderSearch, setShowOrderSearch] = React.useState(false);
+  const [orderToReprint, setOrderToReprint] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (orderToReprint) {
+      const found = archivedOrders.find(o => o.id === orderToReprint);
+      if (found) setSelectedOrder(found);
+      setOrderToReprint(null);
+    }
+  }, [orderToReprint, archivedOrders, setSelectedOrder]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors dark:bg-fixed">
       {/* Заголовок */}
@@ -43,7 +55,7 @@ const MainScreen: React.FC = () => {
             <button 
               onClick={toggleArchiveView}
               className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
-              style={{ minWidth: '44px', minHeight: '44px' }} // Увеличенный размер для тач-интерфейса
+              style={{ minWidth: '44px', minHeight: '44px' }}
             >
               {showArchive ? (
                 <>
@@ -60,11 +72,21 @@ const MainScreen: React.FC = () => {
             <button 
               onClick={() => refetch()}
               className="bg-green-600 hover:bg-green-700 active:bg-green-800 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
-              style={{ minWidth: '44px', minHeight: '44px' }} // Увеличенный размер для тач-интерфейса
+              style={{ minWidth: '44px', minHeight: '44px' }}
             >
               <ArrowPathIcon className="h-6 w-6 mr-1" />
               <span className="hidden sm:inline">Обновить</span>
             </button>
+            {showArchive && (
+              <button
+                onClick={() => setShowOrderSearch(true)}
+                className="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <span className="font-bold text-lg mr-2">Печать по №</span>
+                <span className="hidden sm:inline">🔍</span>
+              </button>
+            )}
           </div>
         </div>
         <p className="text-sm mt-2">
@@ -152,6 +174,12 @@ const MainScreen: React.FC = () => {
           </div>
         )}
       </main>
+
+      <ModalOrderSearch
+        isOpen={showOrderSearch}
+        onClose={() => setShowOrderSearch(false)}
+        onOrderSelect={id => setOrderToReprint(id)}
+      />
     </div>
   );
 };

@@ -15,11 +15,6 @@ declare global {
         message: string;
         loadedConfig?: PrinterConfig[];
       }>;
-      getUSBDevices: () => Promise<{
-        success: boolean;
-        devices: USBDeviceInfo[];
-        message: string;
-      }>;
       testPrinterConnection?: (printerConfig: PrinterConfig) => Promise<{ success: boolean, message: string }>;
       getSystemPrinters?: () => Promise<{ name: string; portName: string; isDefault: boolean }[]>;
       printRawToPrinter?: (printerName: string, rawData: string) => Promise<{ success: boolean; message: string }>;
@@ -31,17 +26,6 @@ export interface PrintOptions {
   template: string;
   count: number;
   printerName?: string;
-}
-
-export interface USBDeviceInfo {
-  path: string;
-  description: string;
-  name?: string;
-  vendorId?: string;
-  productId?: string;
-  vendorName?: string;
-  deviceInfo?: string;
-  matchReason?: string;
 }
 
 // Remove all serial/usb logic and types, only support network printers
@@ -202,64 +186,6 @@ export const getAvailablePrinters = (): Promise<PrinterConfig[]> => {
       resolve([]);
     }
   });
-};
-
-// Функция для получения доступных USB устройств
-export const getAvailableUSBDevices = async (): Promise<USBDeviceInfo[]> => {
-  // Проверяем доступность Electron API
-  if (!window.electronAPI || !window.electronAPI.getUSBDevices) {
-    console.warn('[USB] electronAPI недоступен или метод getUSBDevices отсутствует');
-    console.log('[USB] Режим разработки - возвращаем тестовые USB устройства');
-    
-    // В режиме разработки возвращаем тестовые данные с задержкой
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return [
-      { 
-        path: 'usb://04b8/0e15', 
-        description: 'Epson TM-T88V Receipt Printer',
-        vendorId: '04b8',
-        productId: '0e15',
-        vendorName: 'Epson',
-        deviceInfo: 'TM-T88V Receipt Printer',
-        matchReason: 'известный производитель принтеров'
-      },
-      { 
-        path: 'usb://0a5f/00a0', 
-        description: 'Zebra GK420d Label Printer',
-        vendorId: '0a5f',
-        productId: '00a0',
-        vendorName: 'Zebra',
-        deviceInfo: 'GK420d Label Printer',
-        matchReason: 'известный производитель принтеров, класс устройства соответствует принтеру'
-      },
-      { 
-        path: 'usb://067b/2303', 
-        description: 'Prolific USB-Serial Adapter',
-        vendorId: '067b',
-        productId: '2303',
-        vendorName: 'Prolific',
-        deviceInfo: 'USB-Serial Adapter',
-        matchReason: 'USB-Serial адаптер, часто используемый для принтеров'
-      }
-    ];
-  }
-  
-  try {
-    console.log('[USB] Запрос списка USB устройств через IPC...');
-    const response = await window.electronAPI.getUSBDevices();
-    
-    if (!response.success) {
-      console.error('[USB] Ошибка при получении списка USB устройств:', response.message);
-      return [];
-    }
-    
-    console.log(`[USB] Получено ${response.devices.length} USB устройств:`, response.devices);
-    return response.devices;
-  } catch (error) {
-    console.error('[USB] Ошибка при получении списка USB устройств:', error);
-    return [];
-  }
 };
 
 // Функция для тестирования подключения к принтеру

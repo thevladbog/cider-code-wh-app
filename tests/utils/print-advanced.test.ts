@@ -73,8 +73,8 @@ describe('Advanced Print Utils Testing', () => {
   describe('getAvailablePrinters', () => {
     it('should return printers from Electron API', async () => {
       const printers = await getAvailablePrinters();
-        expect(electronMocks.getPrinters).toHaveBeenCalledTimes(1);
-      expect(printers).toHaveLength(4); // Updated to match the new printers count with serial printer
+      expect(electronMocks.getPrinters).toHaveBeenCalledTimes(1);
+      expect(printers).toHaveLength(2); // Only 2 network printers now
       expect(printers[0].name).toBe('Test Printer 1');
       expect(printers[0].isDefault).toBe(true);
     });
@@ -88,7 +88,8 @@ describe('Advanced Print Utils Testing', () => {
       expect(printers).toEqual([]);
     });
   });
-  describe('testPrinterConnection', () => {    it('should handle network errors', async () => {
+  describe('testPrinterConnection', () => {
+    it('should handle network errors', async () => {
       // Имитируем ошибку сети
       simulatePrinterConnectionError();
       
@@ -125,47 +126,6 @@ describe('Advanced Print Utils Testing', () => {
       
       expect(result.success).toBe(false);
       expect(result.message).toBe('Could not connect to printer');
-    });
-    
-    it('should correctly test serial port printer connection', async () => {
-      // Настраиваем мок
-      electronMocks.testPrinterConnection.mockResolvedValueOnce({ 
-        success: true, 
-        message: 'Serial connection successful' 
-      });
-      
-      const result = await testPrinterConnection({
-        name: 'Serial Printer',
-        connectionType: 'serial',
-        serialPath: '/dev/ttyS0',
-        baudRate: 9600,
-        isDefault: false
-      });
-      
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('Serial connection successful');
-    });
-    
-    it('should handle configurable baud rates', async () => {
-      // Настраиваем мок
-      electronMocks.testPrinterConnection.mockImplementationOnce((config) => {
-        const baudRate = config.baudRate || 9600;
-        return Promise.resolve({ 
-          success: true, 
-          message: `Serial connection successful at ${baudRate} baud` 
-        });
-      });
-      
-      const result = await testPrinterConnection({
-        name: 'Serial Printer',
-        connectionType: 'serial',
-        serialPath: '/dev/ttyS0',
-        baudRate: 19200,
-        isDefault: false
-      });
-      
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('Serial connection successful at 19200 baud');
     });
   });
 });
