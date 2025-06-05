@@ -14,10 +14,10 @@ vi.mock('../../src/utils/print', () => {
   };
 });
 
-describe('PrinterSettings Component', () => {
-  const mockPrinters: PrinterConfig[] = [
-    { name: 'Printer 1', ip: '192.168.1.10', port: 9100, isDefault: true },
-    { name: 'Printer 2', ip: '192.168.1.11', port: 9100, isDefault: false }
+describe('PrinterSettings Component', () => {  const mockPrinters: PrinterConfig[] = [
+    { name: 'Printer 1', connectionType: 'network', ip: '192.168.1.10', port: 9100, isDefault: true },
+    { name: 'Printer 2', connectionType: 'network', ip: '192.168.1.11', port: 9100, isDefault: false },
+    { name: 'USB Printer', connectionType: 'usb', usbPath: 'usb://zebra/zt411', isDefault: false }
   ];
   
   beforeEach(() => {
@@ -33,10 +33,9 @@ describe('PrinterSettings Component', () => {
     // react-testing-library, когда компонент будет создан
     // Сейчас проверяем, что функция API работает корректно
     const printers = await getAvailablePrinters();
-    
-    expect(getAvailablePrinters).toHaveBeenCalled();
+      expect(getAvailablePrinters).toHaveBeenCalled();
     expect(printers).toEqual(mockPrinters);
-    expect(printers.length).toBe(2);
+    expect(printers.length).toBe(3); // Updated to match the mockPrinter array length
     expect(printers[0].isDefault).toBe(true);
   });
   

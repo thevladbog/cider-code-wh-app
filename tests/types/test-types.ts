@@ -4,8 +4,12 @@
 // Тип для принтера в тестах
 export interface TestPrinterConfig {
   name: string;
-  ip: string;
-  port: number;
+  connectionType: 'network' | 'usb' | 'serial';
+  ip?: string;
+  port?: number;
+  usbPath?: string;
+  serialPath?: string;
+  baudRate?: number;
   isDefault: boolean;
 }
 

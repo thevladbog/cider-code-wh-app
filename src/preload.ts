@@ -6,8 +6,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Интерфейсы
 interface PrinterConfig {
   name: string;
-  ip: string;
-  port: number;
+  connectionType: 'network' | 'usb';
+  ip?: string;
+  port?: number;
+  usbPath?: string;
+  baudRate?: number; // Скорость последовательного порта
   isDefault: boolean;
 }
 
@@ -26,6 +29,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Функция для получения списка принтеров
   getPrinters: (): Promise<PrinterConfig[]> => {
     return ipcRenderer.invoke('get-printers');
+  },
+  // Функция для получения списка USB устройств
+  getUSBDevices: (): Promise<{
+    success: boolean;
+    devices: {
+      path: string;
+      description: string;
+      vendorId?: string;
+      productId?: string;
+      vendorName?: string;
+      deviceInfo?: string;
+      matchReason?: string;
+    }[];
+    message: string;
+  }> => {
+    return ipcRenderer.invoke('get-usb-devices');
   },
 
   // Функция для сохранения конфигурации принтера

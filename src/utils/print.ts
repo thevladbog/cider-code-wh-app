@@ -14,7 +14,13 @@ declare global {
         success: boolean;
         message: string;
         loadedConfig?: PrinterConfig[];
-      }>;      testPrinterConnection?: (printerConfig: PrinterConfig) => Promise<{ success: boolean, message: string }>;
+      }>;
+      getUSBDevices: () => Promise<{
+        success: boolean;
+        devices: USBDeviceInfo[];
+        message: string;
+      }>;
+      testPrinterConnection?: (printerConfig: PrinterConfig) => Promise<{ success: boolean, message: string }>;
     };
   }
 }
@@ -25,11 +31,26 @@ export interface PrintOptions {
   printerName?: string;
 }
 
+export interface USBDeviceInfo {
+  path: string;
+  description: string;
+  name?: string;
+  vendorId?: string;
+  productId?: string;
+  vendorName?: string;
+  deviceInfo?: string;
+  matchReason?: string;
+}
+
 export interface PrinterConfig {
   name: string;
-  ip: string;
-  port: number;
-  isDefault: boolean;
+  connectionType: 'network' | 'usb' | 'serial';
+  ip?: string;
+  port?: number;
+  usbPath?: string;
+  serialPath?: string;
+  baudRate?: number; // Скорость последовательного порта
+  isDefault?: boolean;
 }
 
 export interface PrintData extends PrintOptions {
@@ -63,8 +84,7 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
         reject(new Error('Шаблон этикетки не задан'));
         return;
       }
-      
-      // Проверка количества
+        // Проверка количества
       if (count <= 0) {
         console.error('[PRINT] Ошибка: Некорректное количество этикеток:', count);
         reject(new Error('Некорректное количество этикеток'));
@@ -72,7 +92,7 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
       }
       
       // Массив для хранения всех этикеток
-      const labels = [];
+      const labels: string[] = [];
         // Генерируем содержимое для каждой этикетки
       for (let i = 1; i <= count; i++) {
         console.log(`[PRINT] Генерация этикетки ${i}/${count}`);
@@ -113,8 +133,7 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
         setTimeout(() => resolve(true), 1000);
         return;
       }
-      
-      // Используем безопасный API из preload-скрипта
+        // Используем безопасный API из preload-скрипта
       if (window.electronAPI) {
         console.log('[PRINT] Используем electronAPI для печати этикеток');
         console.log('[PRINT] Настройки печати:', { 
@@ -124,10 +143,26 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
 
         console.log({labels})
         
-        window.electronAPI.printLabels({
-          labels,
-          printerName
-        }).then((result) => {
+        // Получим список доступных принтеров, чтобы определить способ подключения
+        getAvailablePrinters().then(availablePrinters => {
+          // Находим выбранный принтер или принтер по умолчанию
+          const targetPrinter = printerName 
+            ? availablePrinters.find(p => p.name === printerName) 
+            : availablePrinters.find(p => p.isDefault);
+            
+          if (targetPrinter) {
+            console.log(`[PRINT] Печать на принтер ${targetPrinter.name} через ${
+              targetPrinter.connectionType === 'network' ? 'сеть' : 'USB'
+            }`);
+          }
+          
+          // Печатаем с использованием API
+          return window.electronAPI.printLabels({
+            labels,
+            printerName
+          });
+        })
+        .then((result) => {
           console.log('[PRINT] Результат печати через IPC:', result ? 'Успешно' : 'Ошибка');
           resolve(result);
         }).catch((error) => {
@@ -169,6 +204,64 @@ export const getAvailablePrinters = (): Promise<PrinterConfig[]> => {
   });
 };
 
+// Функция для получения доступных USB устройств
+export const getAvailableUSBDevices = async (): Promise<USBDeviceInfo[]> => {
+  // Проверяем доступность Electron API
+  if (!window.electronAPI || !window.electronAPI.getUSBDevices) {
+    console.warn('[USB] electronAPI недоступен или метод getUSBDevices отсутствует');
+    console.log('[USB] Режим разработки - возвращаем тестовые USB устройства');
+    
+    // В режиме разработки возвращаем тестовые данные с задержкой
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return [
+      { 
+        path: 'usb://04b8/0e15', 
+        description: 'Epson TM-T88V Receipt Printer',
+        vendorId: '04b8',
+        productId: '0e15',
+        vendorName: 'Epson',
+        deviceInfo: 'TM-T88V Receipt Printer',
+        matchReason: 'известный производитель принтеров'
+      },
+      { 
+        path: 'usb://0a5f/00a0', 
+        description: 'Zebra GK420d Label Printer',
+        vendorId: '0a5f',
+        productId: '00a0',
+        vendorName: 'Zebra',
+        deviceInfo: 'GK420d Label Printer',
+        matchReason: 'известный производитель принтеров, класс устройства соответствует принтеру'
+      },
+      { 
+        path: 'usb://067b/2303', 
+        description: 'Prolific USB-Serial Adapter',
+        vendorId: '067b',
+        productId: '2303',
+        vendorName: 'Prolific',
+        deviceInfo: 'USB-Serial Adapter',
+        matchReason: 'USB-Serial адаптер, часто используемый для принтеров'
+      }
+    ];
+  }
+  
+  try {
+    console.log('[USB] Запрос списка USB устройств через IPC...');
+    const response = await window.electronAPI.getUSBDevices();
+    
+    if (!response.success) {
+      console.error('[USB] Ошибка при получении списка USB устройств:', response.message);
+      return [];
+    }
+    
+    console.log(`[USB] Получено ${response.devices.length} USB устройств:`, response.devices);
+    return response.devices;
+  } catch (error) {
+    console.error('[USB] Ошибка при получении списка USB устройств:', error);
+    return [];
+  }
+};
+
 // Функция для тестирования подключения к принтеру
 export const testPrinterConnection = async (printer: PrinterConfig): Promise<{ success: boolean, message: string }> => {
   // Проверяем доступность Electron API
@@ -176,17 +269,47 @@ export const testPrinterConnection = async (printer: PrinterConfig): Promise<{ s
     console.log('[TEST] Режим разработки или отсутствует API - имитация проверки подключения к принтеру:', printer);
     // В режиме разработки возвращаем успех с задержкой
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return { 
-      success: true, 
-      message: 'Режим разработки: Имитация подключения к принтеру успешна!' 
-    };
+    
+    // Имитируем более реалистичный ответ в зависимости от типа подключения
+    if (printer.connectionType === 'network') {
+      return { 
+        success: true, 
+        message: `Режим разработки: Имитация подключения к сетевому принтеру ${printer.name} успешна!` 
+      };
+    } else if (printer.connectionType === 'usb') {
+      return { 
+        success: true, 
+        message: `Режим разработки: Имитация подключения к USB принтеру ${printer.name} успешна!` 
+      };
+    } else {
+      return { 
+        success: true, 
+        message: 'Режим разработки: Имитация подключения к принтеру успешна!' 
+      };
+    }
   }
   
   // Используем безопасный API из preload-скрипта, если он доступен
   if (window.electronAPI && window.electronAPI.testPrinterConnection) {
     try {
-      console.log('[TEST] Проверка подключения к принтеру:', printer);
+      // Логируем проверку подключения с учетом типа соединения
+      if (printer.connectionType === 'network') {
+        console.log(`[TEST] Проверка подключения к сетевому принтеру: ${printer.name} (${printer.ip}:${printer.port})`);
+      } else if (printer.connectionType === 'usb') {
+        console.log(`[TEST] Проверка подключения к USB принтеру: ${printer.name} (путь: ${printer.usbPath})`);
+      } else {
+        console.log('[TEST] Проверка подключения к принтеру:', printer);
+      }
+      
       const result = await window.electronAPI.testPrinterConnection(printer);
+      
+      // Дополнительное логирование результата
+      if (result.success) {
+        console.log(`[TEST] Успешное подключение к принтеру ${printer.name}: ${result.message}`);
+      } else {
+        console.error(`[TEST] Не удалось подключиться к принтеру ${printer.name}: ${result.message}`);
+      }
+      
       return result;
     } catch (error) {
       console.error('[TEST] Ошибка при проверке подключения к принтеру:', error);

@@ -8,6 +8,8 @@
     "start": "electron-forge start",
     "dev": "vite --port 5173",
     "dev:electron": "cross-env NODE_ENV=development electron-forge start",
+    "rebuild": "npx @electron/rebuild",
+    "postinstall": "npx @electron/rebuild",
     "dev:all": "concurrently -n vite,electron \"npm run dev\" \"npx wait-on http://localhost:5173 && npm run dev:electron\"",
     "package": "electron-forge package",
     "make": "electron-forge make",
@@ -49,6 +51,7 @@
     "@electron-forge/plugin-fuses": "^7.8.1",
     "@electron-forge/plugin-vite": "^7.8.1",
     "@electron/fuses": "^1.8.0",
+    "@electron/rebuild": "^4.0.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^14.3.1",
     "@testing-library/user-event": "^14.5.2",
@@ -80,6 +83,8 @@
     "heroicons": "^2.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "serialport": "^13.0.0",
+    "usb": "^2.15.0",
     "zustand": "^4.3.0"
   }
 }

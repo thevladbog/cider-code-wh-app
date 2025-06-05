@@ -7,8 +7,12 @@ import { afterEach, vi } from 'vitest';
 // Типы для тестирования, должны быть совместимыми с реальными типами из приложения
 export interface PrinterConfig {
   name: string;
-  ip: string;
-  port: number;
+  connectionType: 'network' | 'usb' | 'serial';
+  ip?: string;
+  port?: number;
+  usbPath?: string;
+  serialPath?: string;
+  baudRate?: number; // Скорость последовательного порта
   isDefault: boolean;
 }
 
@@ -25,8 +29,10 @@ export function setupPrinterTests() {
   const mockElectronAPI = {
     printLabels: vi.fn().mockResolvedValue(true),
     getPrinters: vi.fn().mockResolvedValue([
-      { name: 'Printer 1', ip: '192.168.1.10', port: 9100, isDefault: true },
-      { name: 'Printer 2', ip: '192.168.1.11', port: 9100, isDefault: false }
+      { name: 'Printer 1', connectionType: 'network', ip: '192.168.1.10', port: 9100, isDefault: true },
+      { name: 'Printer 2', connectionType: 'network', ip: '192.168.1.11', port: 9100, isDefault: false },
+      { name: 'USB Printer', connectionType: 'usb', usbPath: 'usb://zebra/zt411', isDefault: false },
+      { name: 'Serial Printer', connectionType: 'serial', serialPath: '/dev/ttyS0', baudRate: 9600, isDefault: false }
     ]),
     testPrinterConnection: vi.fn().mockResolvedValue({ success: true, message: 'Connection successful' }),
     savePrinterConfig: vi.fn().mockResolvedValue({ success: true, message: 'Config saved' })
