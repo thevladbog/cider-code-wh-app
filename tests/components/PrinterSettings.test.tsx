@@ -1,63 +1,61 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PrinterConfig, getAvailablePrinters, testPrinterConnection } from '../../src/utils/print';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+import PrinterSettings from '../../src/components/PrinterSettings';
 
-// Мокаем window.electronAPI
-vi.mock('../../src/utils/print', () => {
-  // Сохраняем реальные функции для последующего использования в тестах
-  const originalModule = vi.importActual('../../src/utils/print') as any;
-  
-  // Возвращаем мокированную версию
-  return {
-    ...originalModule,
-    getAvailablePrinters: vi.fn(),
-    testPrinterConnection: vi.fn()
-  };
-});
+// Мокаем getSystemPrinters и testPrinterConnection
+const mockSystemPrinters = [
+  { name: 'Zebra ZT411', portName: 'USB001', isDefault: true },
+  { name: 'Brother QL-800', portName: 'USB002', isDefault: false },
+];
+const mockTestResult = { success: true, message: 'Connection successful' };
 
-describe('PrinterSettings Component', () => {  const mockPrinters: PrinterConfig[] = [
-    { name: 'Printer 1', connectionType: 'network', ip: '192.168.1.10', port: 9100, isDefault: true },
-    { name: 'Printer 2', connectionType: 'network', ip: '192.168.1.11', port: 9100, isDefault: false },
-    { name: 'USB Printer', connectionType: 'usb', usbPath: 'usb://zebra/zt411', isDefault: false }
-  ];
-  
-  beforeEach(() => {
-    vi.resetAllMocks();
-    
-    // Устанавливаем моки для API функций
-    (getAvailablePrinters as any).mockResolvedValue(mockPrinters);
-    (testPrinterConnection as any).mockResolvedValue({ success: true, message: 'Connection successful' });
+vi.mock('../../src/utils/print', () => ({
+  getSystemPrinters: () => Promise.resolve(mockSystemPrinters),
+  testPrinterConnection: () => Promise.resolve(mockTestResult),
+}));
+vi.mock('../../src/utils/serialport-helper', () => ({
+  getAvailableSerialPorts: () => Promise.resolve([]),
+}));
+
+describe('PrinterSettings Component (network printers)', () => {
+  it('shows test result after clicking test button', async () => {
+    render(<PrinterSettings isOpen={true} onClose={vi.fn()} />);
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Добавить принтер'));
+    });
+    const nameInput = await screen.findByPlaceholderText('Название принтера');
+    const networkRadio = await screen.findByLabelText('Сеть');
+    await act(async () => {
+      await user.type(nameInput, 'Test Network Printer');
+      await user.click(networkRadio);
+    });
+    // Ждём появления кнопки теста
+    await waitFor(() => expect(screen.getByText('Тест')).toBeInTheDocument());
+    await act(async () => {
+      await user.click(screen.getByText('Тест'));
+    });
+    await waitFor(async () => {
+      expect(await screen.findByText('Connection successful')).toBeInTheDocument();
+    });
   });
-  
-  it('should load printers on component mount', async () => {
-    // Для полноценных тестов React-компонента нужно будет использовать 
-    // react-testing-library, когда компонент будет создан
-    // Сейчас проверяем, что функция API работает корректно
-    const printers = await getAvailablePrinters();
-      expect(getAvailablePrinters).toHaveBeenCalled();
-    expect(printers).toEqual(mockPrinters);
-    expect(printers.length).toBe(3); // Updated to match the mockPrinter array length
-    expect(printers[0].isDefault).toBe(true);
+
+  it('can add a new network printer and set as default', async () => {
+    render(<PrinterSettings isOpen={true} onClose={vi.fn()} />);
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(screen.getByText('Добавить принтер'));
+    });
+    const nameInput = await screen.findByPlaceholderText('Название принтера');
+    const networkRadio = await screen.findByLabelText('Сеть');
+    await act(async () => {
+      await user.type(nameInput, 'Test Network Printer');
+      await user.click(networkRadio);
+      await user.click(screen.getByText('Добавить'));
+    });
+    // Новый принтер появляется в списке
+    await waitFor(() => expect(screen.getByDisplayValue('Test Network Printer')).toBeInTheDocument());
   });
-  
-  it('should test printer connection successfully', async () => {
-    // Проверяем успешное соединение с принтером
-    const result = await testPrinterConnection(mockPrinters[0]);
-    
-    expect(testPrinterConnection).toHaveBeenCalledWith(mockPrinters[0]);
-    expect(result.success).toBe(true);
-    expect(result.message).toBe('Connection successful');
-  });
-  
-  it('should handle connection failure', async () => {
-    // Меняем мок для имитации ошибки
-    (testPrinterConnection as any).mockResolvedValue({ success: false, message: 'Connection failed' });
-    
-    const result = await testPrinterConnection(mockPrinters[0]);
-    
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Connection failed');
-  });
-  
-  // Дополнительные тесты понадобятся после создания UI-компонента
-  // Например, проверка отображения форм, кнопок, обработка ошибок и т.д.
 });

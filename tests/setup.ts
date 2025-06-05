@@ -1,18 +1,18 @@
 // Настройки и типы для тестов
 import { afterEach, vi } from 'vitest';
 
+// Подключаем кастомные jest-dom матчеры для Vitest
+import './utils/jest-dom';
+
 // Замените этот импорт, если установите testing-library/jest-dom:
 // import '@testing-library/jest-dom/extend-expect';
 
 // Типы для тестирования, должны быть совместимыми с реальными типами из приложения
 export interface PrinterConfig {
   name: string;
-  connectionType: 'network' | 'usb' | 'serial';
-  ip?: string;
-  port?: number;
-  usbPath?: string;
-  serialPath?: string;
-  baudRate?: number; // Скорость последовательного порта
+  connectionType: 'network';
+  ip: string;
+  port: number;
   isDefault: boolean;
 }
 
@@ -30,9 +30,7 @@ export function setupPrinterTests() {
     printLabels: vi.fn().mockResolvedValue(true),
     getPrinters: vi.fn().mockResolvedValue([
       { name: 'Printer 1', connectionType: 'network', ip: '192.168.1.10', port: 9100, isDefault: true },
-      { name: 'Printer 2', connectionType: 'network', ip: '192.168.1.11', port: 9100, isDefault: false },
-      { name: 'USB Printer', connectionType: 'usb', usbPath: 'usb://zebra/zt411', isDefault: false },
-      { name: 'Serial Printer', connectionType: 'serial', serialPath: '/dev/ttyS0', baudRate: 9600, isDefault: false }
+      { name: 'Printer 2', connectionType: 'network', ip: '192.168.1.11', port: 9100, isDefault: false }
     ]),
     testPrinterConnection: vi.fn().mockResolvedValue({ success: true, message: 'Connection successful' }),
     savePrinterConfig: vi.fn().mockResolvedValue({ success: true, message: 'Config saved' })
@@ -63,31 +61,34 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-// Настройка для тестирования React-компонентов
-export function setupReactTesting() {
-  // Настраиваем дополнительные утилиты для тестирования React
-  const IntersectionObserverMock = vi.fn(() => ({
-    disconnect: vi.fn(),
-    observe: vi.fn(),
-    takeRecords: vi.fn(),
-    unobserve: vi.fn(),
-  }));
-  
-  // Мокаем IntersectionObserver глобально
-  vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
-  
-  // Мокаем другие необходимые API браузера
-  vi.stubGlobal('scrollTo', vi.fn());
-  vi.stubGlobal('matchMedia', vi.fn().mockImplementation(query => {
-    return {
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    };
-  }));
+// Мокаем IntersectionObserver глобально
+const IntersectionObserverMock = vi.fn(() => ({
+  disconnect: vi.fn(),
+  observe: vi.fn(),
+  takeRecords: vi.fn(),
+  unobserve: vi.fn(),
+}));
+vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
+
+// Мокаем другие необходимые API браузера
+vi.stubGlobal('scrollTo', vi.fn());
+vi.stubGlobal('matchMedia', vi.fn().mockImplementation(query => {
+  return {
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  };
+}));
+
+// Мокаем ResizeObserver для HeadlessUI/DOM
+class ResizeObserverMock {
+  observe(): void { /* noop */ }
+  unobserve(): void { /* noop */ }
+  disconnect(): void { /* noop */ }
 }
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);

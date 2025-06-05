@@ -19,6 +19,17 @@ interface PrintLabelsOptions {
   printerName?: string;
 }
 
+// Тип для информации о последовательном порте (дублируем для preload)
+interface SerialPortInfo {
+  path: string;
+  manufacturer?: string;
+  serialNumber?: string;
+  pnpId?: string;
+  locationId?: string;
+  vendorId?: string;
+  productId?: string;
+}
+
 // Экспортируем безопасное API для рендерера
 contextBridge.exposeInMainWorld('electronAPI', {
   // Функция для печати этикеток
@@ -59,5 +70,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Функция для проверки подключения к принтеру
   testPrinterConnection: (printerConfig: PrinterConfig): Promise<{ success: boolean, message: string }> => {
     return ipcRenderer.invoke('test-printer-connection', printerConfig);
-  }
+  },
+
+  // Получить системные принтеры
+  getSystemPrinters: () => ipcRenderer.invoke('get-system-printers'),
+
+  // Печать сырого текста на принтере
+  printRawToPrinter: (printerName: string, rawData: string) => ipcRenderer.invoke('print-raw-to-printer', printerName, rawData),
+
+  // Получить список последовательных портов
+  getSerialPorts: (): Promise<SerialPortInfo[]> => {
+    return ipcRenderer.invoke('get-serial-ports');
+  },
+
+  // Тестировать последовательный порт
+  testSerialPort: (printerConfig: PrinterConfig): Promise<{ success: boolean, message: string }> => {
+    return ipcRenderer.invoke('test-serial-port', printerConfig);
+  },
+
+  // Получить расширенную информацию о последовательных портах
+  getEnhancedSerialPortInfo: (): Promise<SerialPortInfo[]> => {
+    return ipcRenderer.invoke('get-enhanced-serial-port-info');
+  },
 });

@@ -20,9 +20,7 @@ const Modal: React.FC = () => {
 
   if (!selectedOrder) return null;  const handlePrint = async () => {
     if (transportUnits <= 0) return;
-    
     setIsPrinting(true);
-    
     try {
       console.log('[UI] Отправка данных на печать...');
       console.log('[UI] Шаблон (первые 200 символов):', 
@@ -58,9 +56,12 @@ const Modal: React.FC = () => {
       console.log('[UI] Результат печати:', success ? 'Успешно' : 'Ошибка');
       
       if (success) {
-        console.log(`[UI] Архивация заказа ${selectedOrder.id}...`);
-        await archiveOrder(selectedOrder.id);
-        setSelectedOrder(null);
+        if (selectedOrder.status === 'ARCHIVE') {
+          setSelectedOrder(null);
+        } else {
+          await archiveOrder(selectedOrder.id);
+          setSelectedOrder(null);
+        }
       } else {
         alert('Ошибка при печати этикеток. Проверьте настройки принтера и наличие бумаги.');
       }

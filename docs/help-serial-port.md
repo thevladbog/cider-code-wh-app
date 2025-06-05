@@ -1,6 +1,6 @@
-# Serial Port Implementation Help
+# Serial Port Help (Deprecated)
 
-This guide explains how to configure and troubleshoot serial port printers in the application, with a focus on understanding and configuring different baud rates.
+Serial/COM printer support has been removed from this application. Only network printers are supported. This document is retained for historical reference only.
 
 ## What is a Serial Port Connection?
 

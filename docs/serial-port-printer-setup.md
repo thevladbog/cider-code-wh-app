@@ -1,6 +1,6 @@
-# Serial Port Printer Setup Guide
+# Serial Port Printer Setup (Deprecated)
 
-This documentation explains how to set up and configure serial port printers with the application, including how to work with different baud rates.
+Serial/COM printer support has been removed from this application. Only network printers are supported. This document is retained for historical reference only.
 
 ## Introduction
 

@@ -91,7 +91,8 @@ const MainScreen: React.FC = () => {
               isMobile ? 'grid-cols-1' : 
               isTablet ? 'grid-cols-2' : 
               'grid-cols-3'
-            }`}>            {displayedOrders.map((order) => (
+            }`}>
+            {displayedOrders.map((order) => (
               <div
                 key={order.id}
                 className={`
@@ -103,7 +104,7 @@ const MainScreen: React.FC = () => {
                   transition-all duration-300 bg-white dark:bg-opacity-10 dark:bg-gray-800 dark:backdrop-blur-sm dark:shadow-dark-card
                 `}
                 onClick={() => !showArchive && setSelectedOrder(order)}
-                style={{ minHeight: '120px' }} // Обеспечиваем достаточный размер для тач-интерфейса
+                style={{ minHeight: '120px' }}
               >
                 {/* Декоративный элемент для темной темы */}
                 <div className="hidden dark:block absolute top-0 left-0 w-2 h-full bg-blue-500 bg-gradient-to-b from-blue-400 to-blue-600"></div>
@@ -135,6 +136,17 @@ const MainScreen: React.FC = () => {
                     </div>
                   )}
                 </div>
+                {showArchive && (
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      setSelectedOrder(order); // Открыть модалку с вводом количества
+                    }}
+                    className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow text-sm font-medium"
+                  >
+                    Распечатать повторно
+                  </button>
+                )}
               </div>
             ))}
           </div>

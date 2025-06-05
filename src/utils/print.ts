@@ -21,6 +21,8 @@ declare global {
         message: string;
       }>;
       testPrinterConnection?: (printerConfig: PrinterConfig) => Promise<{ success: boolean, message: string }>;
+      getSystemPrinters?: () => Promise<{ name: string; portName: string; isDefault: boolean }[]>;
+      printRawToPrinter?: (printerName: string, rawData: string) => Promise<{ success: boolean; message: string }>;
     };
   }
 }
@@ -42,14 +44,12 @@ export interface USBDeviceInfo {
   matchReason?: string;
 }
 
+// Remove all serial/usb logic and types, only support network printers
 export interface PrinterConfig {
   name: string;
-  connectionType: 'network' | 'usb' | 'serial';
-  ip?: string;
-  port?: number;
-  usbPath?: string;
-  serialPath?: string;
-  baudRate?: number; // Скорость последовательного порта
+  connectionType: 'network';
+  ip: string;
+  port: number;
   isDefault?: boolean;
 }
 
@@ -276,11 +276,6 @@ export const testPrinterConnection = async (printer: PrinterConfig): Promise<{ s
         success: true, 
         message: `Режим разработки: Имитация подключения к сетевому принтеру ${printer.name} успешна!` 
       };
-    } else if (printer.connectionType === 'usb') {
-      return { 
-        success: true, 
-        message: `Режим разработки: Имитация подключения к USB принтеру ${printer.name} успешна!` 
-      };
     } else {
       return { 
         success: true, 
@@ -295,8 +290,6 @@ export const testPrinterConnection = async (printer: PrinterConfig): Promise<{ s
       // Логируем проверку подключения с учетом типа соединения
       if (printer.connectionType === 'network') {
         console.log(`[TEST] Проверка подключения к сетевому принтеру: ${printer.name} (${printer.ip}:${printer.port})`);
-      } else if (printer.connectionType === 'usb') {
-        console.log(`[TEST] Проверка подключения к USB принтеру: ${printer.name} (путь: ${printer.usbPath})`);
       } else {
         console.log('[TEST] Проверка подключения к принтеру:', printer);
       }
@@ -327,3 +320,20 @@ export const testPrinterConnection = async (printer: PrinterConfig): Promise<{ s
     message: 'Функция проверки принтера недоступна в текущем окружении' 
   };
 };
+
+// Получение списка системных принтеров (Windows, через PowerShell)
+export async function getSystemPrinters(): Promise<{ name: string; portName: string; isDefault: boolean }[]> {
+  if (window.electronAPI && window.electronAPI.getSystemPrinters) {
+    return window.electronAPI.getSystemPrinters();
+  }
+  // fallback: пустой список
+  return [];
+}
+
+// RAW печать на выбранный принтер (Windows, через lpr)
+export async function printRawToPrinter(printerName: string, rawData: string): Promise<{ success: boolean; message: string }> {
+  if (window.electronAPI && window.electronAPI.printRawToPrinter) {
+    return window.electronAPI.printRawToPrinter(printerName, rawData);
+  }
+  return { success: false, message: 'Electron API недоступен' };
+}

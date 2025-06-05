@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import '../utils/jest-dom';
-import { setupReactTesting } from '../setup';
 
 // Импортируем типы
 import type { Order } from '../../src/models/orders';
@@ -58,7 +57,6 @@ import { useStore } from '../../src/store';
 
 // Настройка окружения для React тестирования
 beforeEach(() => {
-  setupReactTesting();
   vi.clearAllMocks();
 });
 
