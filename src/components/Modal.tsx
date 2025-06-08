@@ -198,9 +198,10 @@ const Modal: React.FC = () => {
   };
 
   return (
-    <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>      <div 
+    <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+      <div 
         ref={modalRef}
-        className="modal dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="modal dark:bg-gray-800 dark:text-white bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
         onClick={(e) => e.stopPropagation()} 
         onKeyDown={handleKeyDown}
         tabIndex={0} // Позволяет элементу получать фокус и события клавиатуры

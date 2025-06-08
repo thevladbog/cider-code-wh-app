@@ -167,13 +167,13 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-30 flex items-center justify-center">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full">
-          <div className="bg-white px-6 pt-6 pb-4 sm:p-8 sm:pb-4">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full">
+          <div className="bg-white dark:bg-gray-800 px-6 pt-6 pb-4 sm:p-8 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Настройки принтеров</h3>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Настройки принтеров</h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -182,48 +182,29 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
             <div className="space-y-6">
               {/* Список существующих принтеров */}
               {printers.map((printer, index) => (
-                <div key={index} className="relative bg-white rounded-lg shadow-md p-5 border border-gray-200 group hover:shadow-lg transition-shadow">
-                  <div className="absolute top-4 right-4 flex gap-2 z-10">
-                    <button
-                      onClick={() => testPrinter(printer, index)}
-                      disabled={testingPrinter === index}
-                      className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
-                    >
-                      {testingPrinter === index ? (
-                        <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
-                      ) : (
-                        <ArrowPathIcon className="h-4 w-4 mr-1" />
-                      )}
-                      Тест
-                    </button>
-                    <button
-                      onClick={() => removePrinter(index)}
-                      className="text-red-500 hover:text-red-700 bg-white rounded-full p-1 border border-transparent hover:border-red-200 transition-colors"
-                    >
-                      <XMarkIcon className="h-5 w-5" />
-                    </button>
-                  </div>
+                <div key={index} className="relative bg-white dark:bg-gray-700 rounded-lg shadow-md p-5 border border-gray-200 dark:border-gray-600 group hover:shadow-lg transition-shadow">
+                  {/* Удалён абсолютный блок с кнопками Тест и Удалить */}
                   {/* Результат тестирования только для этого принтера */}
                   {testResults[index] && (
-                    <div className={`mb-2 p-2 rounded text-xs ${testResults[index]?.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <div className={`mb-2 p-2 rounded text-xs ${testResults[index]?.success ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'}`}>
                       {testResults[index]?.message}
                     </div>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div className="min-w-0">
-                      <label className="block text-xs font-medium text-gray-500 mb-1 truncate">Название</label>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <div className="min-w-0 md:col-span-1">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-300 mb-1 truncate">Название</label>
                       <input
                         type="text"
                         value={printer.name}
                         onChange={(e) => updatePrinter(index, 'name', e.target.value)}
-                        className="text-base border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                        className="text-base border-gray-300 dark:border-gray-500 rounded-md w-full focus:ring-blue-500 focus:border-blue-500 px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                         placeholder="Название принтера"
                       />
                     </div>
-                    <div className="min-w-0">
-                      <label className="block text-xs font-medium text-gray-500 mb-1 truncate">Тип подключения</label>
+                    <div className="min-w-0 md:col-span-1">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-300 mb-1 truncate">Тип подключения</label>
                       <div className="flex gap-4 items-center flex-wrap">
-                        <label className="inline-flex items-center text-xs min-w-fit">
+                        <label className="inline-flex items-center text-xs min-w-fit dark:text-gray-200">
                           <input
                             type="radio"
                             value="network"
@@ -235,27 +216,50 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
                         </label>
                       </div>
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex gap-2 w-full mt-2">
+                    <div className="min-w-0 md:col-span-1">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-300 mb-1 truncate">IP и порт</label>
+                      <div className="flex gap-2 items-start flex-wrap">
                         <input
                           type="text"
                           value={printer.ip}
                           onChange={(e) => updatePrinter(index, 'ip', e.target.value)}
-                          className="w-1/2 min-w-0 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                          className="w-28 md:w-full min-w-0 border-gray-300 dark:border-gray-500 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                           placeholder="IP адрес"
                         />
                         <input
                           type="number"
                           value={printer.port}
                           onChange={(e) => updatePrinter(index, 'port', parseInt(e.target.value) || 9100)}
-                          className="w-1/2 min-w-0 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                          className="w-20 md:w-full min-w-0 border-gray-300 dark:border-gray-500 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                           placeholder="Порт"
                         />
                       </div>
                     </div>
+                    <div className="flex flex-col items-end gap-2 mt-4 md:mt-0 md:col-span-1 md:items-start">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => testPrinter(printer, index)}
+                          disabled={testingPrinter === index}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-500 shadow-sm text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
+                        >
+                          {testingPrinter === index ? (
+                            <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
+                          ) : (
+                            <ArrowPathIcon className="h-4 w-4 mr-1" />
+                          )}
+                          Тест
+                        </button>
+                        <button
+                          onClick={() => removePrinter(index)}
+                          className="text-red-500 hover:text-red-700 bg-white dark:bg-gray-800 rounded-full p-1 border border-transparent hover:border-red-200 dark:hover:border-red-400 transition-colors"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <div className="mt-3">
-                    <label className="inline-flex items-center text-xs">
+                    <label className="inline-flex items-center text-xs dark:text-gray-200">
                       <input
                         type="checkbox"
                         checked={printer.isDefault || false}
@@ -268,7 +272,7 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
                         }}
                         className="form-checkbox h-4 w-4 text-blue-600"
                       />
-                      <span className="ml-2 text-gray-700">Принтер по умолчанию</span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-200">Принтер по умолчанию</span>
                     </label>
                   </div>
                 </div>
@@ -276,23 +280,23 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
 
               {/* Форма добавления нового принтера */}
               {isAddingNew && (
-                <div className="border-2 border-dashed border-blue-200 rounded-lg p-5 bg-blue-50/40 mt-2">
-                  <h4 className="font-medium text-gray-900 mb-3 text-base">Добавить новый принтер</h4>
+                <div className="border-2 border-dashed border-blue-200 dark:border-blue-400 rounded-lg p-5 bg-blue-50/40 dark:bg-gray-700 mt-2">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-3 text-base">Добавить новый принтер</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Название</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-300 mb-1">Название</label>
                       <input
                         type="text"
                         value={newPrinter.name}
                         onChange={(e) => setNewPrinter({ ...newPrinter, name: e.target.value })}
-                        className="border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                        className="border-gray-300 dark:border-gray-500 rounded-md w-full focus:ring-blue-500 focus:border-blue-500 px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                         placeholder="Название принтера"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Тип подключения</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-300 mb-1">Тип подключения</label>
                       <div className="flex gap-4 items-center">
-                        <label className="inline-flex items-center text-xs">
+                        <label className="inline-flex items-center text-xs dark:text-gray-200">
                           <input
                             type="radio"
                             value="network"
@@ -310,28 +314,28 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
                           type="text"
                           value={newPrinter.ip}
                           onChange={(e) => setNewPrinter({ ...newPrinter, ip: e.target.value })}
-                          className="w-1/2 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                          className="w-1/2 border-gray-300 dark:border-gray-500 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                           placeholder="IP адрес"
                         />
                         <input
                           type="number"
                           value={newPrinter.port}
                           onChange={(e) => setNewPrinter({ ...newPrinter, port: parseInt(e.target.value) || 9100 })}
-                          className="w-1/2 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                          className="w-1/2 border-gray-300 dark:border-gray-500 rounded-md focus:ring-blue-500 focus:border-blue-500 px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                           placeholder="Порт"
                         />
                       </div>
                     </div>
                   </div>
                   <div className="mt-3 flex items-center gap-4">
-                    <label className="inline-flex items-center text-xs">
+                    <label className="inline-flex items-center text-xs dark:text-gray-200">
                       <input
                         type="checkbox"
                         checked={newPrinter.isDefault}
                         onChange={(e) => setNewPrinter({ ...newPrinter, isDefault: e.target.checked })}
                         className="form-checkbox h-4 w-4 text-blue-600"
                       />
-                      <span className="ml-2 text-gray-700">Принтер по умолчанию</span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-200">Принтер по умолчанию</span>
                     </label>
                     <button
                       onClick={addNewPrinter}
@@ -347,17 +351,17 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
               {!isAddingNew && (
                 <button
                   onClick={() => setIsAddingNew(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 dark:border-blue-400 rounded-lg bg-blue-50 dark:bg-gray-700 text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-gray-600 transition-colors"
                 >
                   <PlusIcon className="h-5 w-5" /> Добавить новый принтер
                 </button>
               )}
             </div>
           </div>
-          <div className="bg-gray-50 px-6 py-3 flex justify-end gap-2 rounded-b-xl">
+          <div className="bg-gray-50 dark:bg-gray-900 px-6 py-3 flex justify-end gap-2 rounded-b-xl">
             <button
               onClick={onClose}
-              className="px-4 py-1 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors"
+              className="px-4 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded-md text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >Отмена</button>
             <button
               onClick={savePrinters}

@@ -1,4 +1,7 @@
 // We use a safe approach to access electron features
+
+import { format } from "date-fns";
+
 // Интерфейс для параметров печати через Electron API
 interface PrintLabelsOptions {
   labels: string[];
@@ -48,6 +51,8 @@ export interface PrintData extends PrintOptions {
 export const printLabels = (options: PrintData): Promise<boolean> => {
   const { template, count, printerName, orderNumber, consignee, address, deliveryDate } = options;
 
+  
+
   return new Promise((resolve, reject) => {
     try {
       console.log('[PRINT] Начало процесса печати');
@@ -84,11 +89,19 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
         let labelContent = template
           .replace(/{{currentLabel}}/g, i.toString())
           .replace(/{{totalLabels}}/g, count.toString());
+
+          const deliveryDateBarcode = format(deliveryDate, 'ddMMyy')
+          const pieceNumberBarcode = 'P' + i.toString().padStart(3, '0');
+          const orderNumberBarcode = deliveryDateBarcode + (orderNumber ? `-${orderNumber}` : '') + pieceNumberBarcode
+          
+          labelContent = labelContent.replace(/{{orderNumberBarcode}}/g, orderNumberBarcode); 
+          labelContent = labelContent.replace(/{{pieceNumberBarcode}}/g, pieceNumberBarcode); 
+          labelContent = labelContent.replace(/{{deliveryDateBarcode}}/g, deliveryDateBarcode); 
           
         // Добавляем поля из заказа, если они указаны
         if (orderNumber) labelContent = labelContent.replace(/{{orderNumber}}/g, orderNumber);        if (consignee) labelContent = labelContent.replace(/{{consignee}}/g, consignee);
         if (address) labelContent = labelContent.replace(/{{address}}/g, address);
-        if (deliveryDate) labelContent = labelContent.replace(/{{deliveryDate}}/g, deliveryDate);
+        if (deliveryDate) labelContent = labelContent.replace(/{{deliveryDate}}/g, format(deliveryDate, 'dd.MM. yyyy г.'));
         
         // Add Swiss721 font selection command if not already present
         // Insert ^A@ command after ^XA if not already added
