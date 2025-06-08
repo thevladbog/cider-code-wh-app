@@ -1,6 +1,6 @@
 {
-  "name": "cider-code-wh-app",
-  "productName": "cider-code-wh-app",
+  "name": "bottle-code-wh-app",
+  "productName": "bottle-code-wh-app",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
@@ -90,8 +90,6 @@
     "heroicons": "^2.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "serialport": "^13.0.0",
-    "usb": "^2.15.0",
     "zustand": "^4.3.0"
   }
 }
