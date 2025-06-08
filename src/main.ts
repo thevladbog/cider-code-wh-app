@@ -1,14 +1,30 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
-import started from 'electron-squirrel-startup';
+// Закомментировано из-за неиспользуемого импорта
+// import started from 'electron-squirrel-startup';
 import fs from 'node:fs';
 import net from 'node:net';
 import { exec } from 'child_process';
+import { initEnvironment } from './config/environment';
+
+// Инициализация окружения
+initEnvironment();
 
 // Отображение ошибок в главном процессе
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   console.error('Uncaught Exception in Main Process:', error);
 });
+
+// Импорт функций для получения конфигурации API
+import { getApiConfig, API_ENDPOINTS } from './config/api.config';
+
+// Интерфейсы для работы с API
+interface ApiRequestOptions {
+  endpoint: string;
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  params?: Record<string, string>;
+  body?: Record<string, unknown>;
+}
 
 // Интерфейсы для работы с принтерами
 interface PrinterConfig {
@@ -29,39 +45,51 @@ const loadPrinterConfig = (): PrinterConfig[] => {
   try {
     const configPath = path.join(app.getPath('userData'), 'printers.json');
     console.log(`[CONFIG] Загрузка конфигурации принтеров из ${configPath}`);
-    
+
     if (fs.existsSync(configPath)) {
       const configData = fs.readFileSync(configPath, 'utf8');
       console.log(`[CONFIG] Файл конфигурации найден, размер: ${configData.length} байт`);
-      
+
       try {
         const parsedData = JSON.parse(configData);
-        
+
         // Проверяем формат данных
         if (Array.isArray(parsedData)) {
           console.log(`[CONFIG] Загружено ${parsedData.length} принтеров`);
-            // Дополнительная валидация
+          // Дополнительная валидация
           const validPrinters = parsedData.filter(p => {
             // Базовая валидация для всех принтеров
-            if (!(p && typeof p === 'object' && 
-                typeof p.name === 'string' && p.name.trim() !== '' &&
-                typeof p.connectionType === 'string')) {
+            if (
+              !(
+                p &&
+                typeof p === 'object' &&
+                typeof p.name === 'string' &&
+                p.name.trim() !== '' &&
+                typeof p.connectionType === 'string'
+              )
+            ) {
               return false;
             }
-            
+
             // Валидация для сетевых принтеров
             if (p.connectionType === 'network') {
-              return typeof p.ip === 'string' && p.ip.trim() !== '' &&
-                     typeof p.port === 'number' && p.port > 0;
+              return (
+                typeof p.ip === 'string' &&
+                p.ip.trim() !== '' &&
+                typeof p.port === 'number' &&
+                p.port > 0
+              );
             }
-            
+
             return false;
           });
-          
+
           if (validPrinters.length < parsedData.length) {
-            console.warn(`[CONFIG] Предупреждение: ${parsedData.length - validPrinters.length} невалидных принтеров были отфильтрованы`);
+            console.warn(
+              `[CONFIG] Предупреждение: ${parsedData.length - validPrinters.length} невалидных принтеров были отфильтрованы`
+            );
           }
-          
+
           // Если есть хотя бы один валидный принтер, возвращаем его
           if (validPrinters.length > 0) {
             return validPrinters;
@@ -77,7 +105,9 @@ const loadPrinterConfig = (): PrinterConfig[] => {
         console.error('[CONFIG] Ошибка при разборе JSON-файла конфигурации:', parseError);
       }
     } else {
-      console.log('[CONFIG] Файл конфигурации не найден, будет использован пустой список принтеров');
+      console.log(
+        '[CONFIG] Файл конфигурации не найден, будет использован пустой список принтеров'
+      );
     }
   } catch (error) {
     console.error('[CONFIG] Ошибка при загрузке конфигурации принтеров:', error);
@@ -95,42 +125,55 @@ const savePrinterConfig = (config: PrinterConfig[]): boolean => {
       console.error('[CONFIG] Ошибка: входные данные не являются массивом конфигураций принтеров');
       return false;
     }
-    
+
     const configPath = path.join(app.getPath('userData'), 'printers.json');
     console.log(`[CONFIG] Сохранение конфигурации принтеров в ${configPath}`);
     console.log(`[CONFIG] Каталог userData: ${app.getPath('userData')}`);
     console.log('[CONFIG] Данные для сохранения:', JSON.stringify(config, null, 2));
-      // Валидация данных перед сохранением
+    // Валидация данных перед сохранением
     const validConfig = config.filter(p => {
       // Базовая валидация для всех принтеров
-      if (!(p && typeof p === 'object' && 
-          typeof p.name === 'string' && p.name.trim() !== '' &&
-          typeof p.connectionType === 'string')) {
+      if (
+        !(
+          p &&
+          typeof p === 'object' &&
+          typeof p.name === 'string' &&
+          p.name.trim() !== '' &&
+          typeof p.connectionType === 'string'
+        )
+      ) {
         return false;
       }
-      
+
       // Валидация для сетевых принтеров
       if (p.connectionType === 'network') {
-        return typeof p.ip === 'string' && p.ip.trim() !== '' &&
-              typeof p.port === 'number' && p.port > 0;
+        return (
+          typeof p.ip === 'string' && p.ip.trim() !== '' && typeof p.port === 'number' && p.port > 0
+        );
       }
-      
+
       return false;
     });
-    
-    console.log(`[CONFIG] После валидации: ${validConfig.length} из ${config.length} принтеров прошли проверку`);
-    
+
+    console.log(
+      `[CONFIG] После валидации: ${validConfig.length} из ${config.length} принтеров прошли проверку`
+    );
+
     if (validConfig.length < config.length) {
-      console.warn(`[CONFIG] Предупреждение: ${config.length - validConfig.length} невалидных принтеров не будут сохранены`);
+      console.warn(
+        `[CONFIG] Предупреждение: ${config.length - validConfig.length} невалидных принтеров не будут сохранены`
+      );
     }
-    
+
     // Проверяем наличие принтера по умолчанию
     const hasDefault = validConfig.some(printer => printer.isDefault);
     if (!hasDefault && validConfig.length > 0) {
-      console.warn('[CONFIG] Не указан принтер по умолчанию, устанавливаем первый принтер как принтер по умолчанию');
+      console.warn(
+        '[CONFIG] Не указан принтер по умолчанию, устанавливаем первый принтер как принтер по умолчанию'
+      );
       validConfig[0].isDefault = true;
     }
-    
+
     // Создаем папку, если она не существует
     const dirPath = path.dirname(configPath);
     try {
@@ -138,7 +181,7 @@ const savePrinterConfig = (config: PrinterConfig[]): boolean => {
         fs.mkdirSync(dirPath, { recursive: true });
         console.log(`[CONFIG] Создана директория: ${dirPath}`);
       }
-      
+
       // Проверяем права доступа к директории
       try {
         // Проверяем возможность записи
@@ -154,7 +197,7 @@ const savePrinterConfig = (config: PrinterConfig[]): boolean => {
       console.error(`[CONFIG] Ошибка при создании или проверке директории ${dirPath}:`, dirError);
       return false;
     }
-    
+
     // Безопасная запись файла
     try {
       // Бэкапим предыдущую конфигурацию, если она существует
@@ -167,17 +210,17 @@ const savePrinterConfig = (config: PrinterConfig[]): boolean => {
           console.warn('[CONFIG] Не удалось создать бэкап предыдущей конфигурации:', backupError);
         }
       }
-      
+
       // Создаем временный файл конфигурации
       const tempConfigPath = `${configPath}.temp`;
       fs.writeFileSync(tempConfigPath, JSON.stringify(validConfig, null, 2));
       console.log(`[CONFIG] Временный файл конфигурации создан: ${tempConfigPath}`);
-      
+
       // Проверяем содержимое временного файла
       try {
         const tempContent = fs.readFileSync(tempConfigPath, 'utf8');
         const tempPrinters = JSON.parse(tempContent);
-        
+
         if (!Array.isArray(tempPrinters) || tempPrinters.length !== validConfig.length) {
           console.error('[CONFIG] Ошибка в временном файле конфигурации, отмена сохранения');
           fs.unlinkSync(tempConfigPath);
@@ -187,39 +230,45 @@ const savePrinterConfig = (config: PrinterConfig[]): boolean => {
         console.error('[CONFIG] Ошибка при проверке временного файла:', tempError);
         return false;
       }
-      
+
       // Переименовываем временный файл в окончательный (атомарная операция)
       try {
         // Удаляем существующий файл, если он есть
         if (fs.existsSync(configPath)) {
           fs.unlinkSync(configPath);
         }
-        
+
         // Переименовываем временный файл
         fs.renameSync(tempConfigPath, configPath);
-        console.log(`[CONFIG] Конфигурация принтеров успешно сохранена (${validConfig.length} принтеров)`);
+        console.log(
+          `[CONFIG] Конфигурация принтеров успешно сохранена (${validConfig.length} принтеров)`
+        );
       } catch (renameError) {
         console.error('[CONFIG] Ошибка при переименовании временного файла:', renameError);
         return false;
       }
-      
+
       // Финальная проверка
       if (fs.existsSync(configPath)) {
         const stats = fs.statSync(configPath);
         console.log(`[CONFIG] Файл конфигурации создан: ${configPath}, размер: ${stats.size} байт`);
-        
+
         try {
           const savedContent = fs.readFileSync(configPath, 'utf8');
           console.log('[CONFIG] Прочитано содержимое файла, длина:', savedContent.length);
-          
+
           const savedPrinters = JSON.parse(savedContent);
-          
+
           if (Array.isArray(savedPrinters) && savedPrinters.length === validConfig.length) {
-            console.log(`[CONFIG] Верификация: файл содержит ${savedPrinters.length} принтеров, как и ожидалось`);
+            console.log(
+              `[CONFIG] Верификация: файл содержит ${savedPrinters.length} принтеров, как и ожидалось`
+            );
           } else {
-            console.error(`[CONFIG] Ошибка верификации: файл содержит ${
-              Array.isArray(savedPrinters) ? savedPrinters.length : 'неверный формат'
-            }, ожидалось ${validConfig.length}`);
+            console.error(
+              `[CONFIG] Ошибка верификации: файл содержит ${
+                Array.isArray(savedPrinters) ? savedPrinters.length : 'неверный формат'
+              }, ожидалось ${validConfig.length}`
+            );
             return false;
           }
         } catch (verifyError) {
@@ -234,25 +283,28 @@ const savePrinterConfig = (config: PrinterConfig[]): boolean => {
       console.error('[CONFIG] Ошибка при записи файла конфигурации:', writeError);
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error('[CONFIG] Ошибка при сохранении конфигурации принтеров:', error);
     // Подробно логируем ошибку для отладки
     console.error('[CONFIG] Тип ошибки:', typeof error);
-    console.error('[CONFIG] Детали ошибки:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    
+    console.error(
+      '[CONFIG] Детали ошибки:',
+      JSON.stringify(error, Object.getOwnPropertyNames(error))
+    );
+
     if (error instanceof Error) {
       console.error('[CONFIG] Stack trace:', error.stack);
     }
-    
+
     return false;
   }
 };
 
 // Получение списка системных принтеров (Windows, через PowerShell)
 ipcMain.handle('get-system-printers', async () => {
-  return new Promise<{ name: string; portName: string; isDefault: boolean }[]>((resolve) => {
+  return new Promise<{ name: string; portName: string; isDefault: boolean }[]>(resolve => {
     exec(
       'Get-WmiObject Win32_Printer | Select-Object Name,PortName,Default | ConvertTo-Json',
       { shell: 'powershell.exe' },
@@ -265,7 +317,7 @@ ipcMain.handle('get-system-printers', async () => {
           const printers = JSON.parse(stdout);
           const arr = Array.isArray(printers) ? printers : [printers];
           resolve(
-            arr.map((p) => ({
+            arr.map(p => ({
               name: p.Name as string,
               portName: p.PortName as string,
               isDefault: !!p.Default,
@@ -281,13 +333,13 @@ ipcMain.handle('get-system-printers', async () => {
 
 // RAW печать на выбранный принтер (Windows, через lpr)
 ipcMain.handle('print-raw-to-printer', async (_event, printerName: string, rawData: string) => {
-  return new Promise<{ success: boolean; message: string }>((resolve) => {
+  return new Promise<{ success: boolean; message: string }>(resolve => {
     try {
       const tmpPath = path.join(app.getPath('temp'), `raw_${Date.now()}.zpl`);
       fs.writeFileSync(tmpPath, rawData, 'utf8');
       // lpr должен быть установлен в системе (Windows Feature: Print and Document Services > LPR Port Monitor)
       const cmd = `lpr -S localhost -P "${printerName}" "${tmpPath}" && del "${tmpPath}"`;
-      exec(cmd, { shell: 'cmd.exe' }, (err) => {
+      exec(cmd, { shell: 'cmd.exe' }, err => {
         if (err) {
           resolve({ success: false, message: 'Ошибка печати: ' + err.message });
         } else {
@@ -295,13 +347,19 @@ ipcMain.handle('print-raw-to-printer', async (_event, printerName: string, rawDa
         }
       });
     } catch (e) {
-      resolve({ success: false, message: 'Ошибка печати: ' + (e instanceof Error ? e.message : String(e)) });
+      resolve({
+        success: false,
+        message: 'Ошибка печати: ' + (e instanceof Error ? e.message : String(e)),
+      });
     }
   });
 });
 
 // Универсальная функция печати
-async function printLabelSmart(options: { labels: string[]; printerName?: string }): Promise<{ success: boolean; message: string }> {
+async function printLabelSmart(options: {
+  labels: string[];
+  printerName?: string;
+}): Promise<{ success: boolean; message: string }> {
   const { labels, printerName } = options;
   const printers = loadPrinterConfig();
   let target: PrinterConfig | undefined = undefined;
@@ -316,7 +374,7 @@ async function printLabelSmart(options: { labels: string[]; printerName?: string
   const rawData = labels.join('\n');
   // Сетевой принтер (RAW TCP/IP)
   if (target.connectionType === 'network' && target.ip && target.port) {
-    return await new Promise((resolve) => {
+    return await new Promise(resolve => {
       const client = new net.Socket();
       client.connect(target.port, target.ip, () => {
         client.write(rawData, () => {
@@ -324,18 +382,18 @@ async function printLabelSmart(options: { labels: string[]; printerName?: string
           resolve({ success: true, message: 'Печать отправлена на сетевой принтер' });
         });
       });
-      client.on('error', (err) => {
+      client.on('error', err => {
         resolve({ success: false, message: 'Ошибка печати (TCP/IP): ' + err.message });
       });
     });
   }
   // Fallback: lpr (Windows очередь)
-  return await new Promise((resolve) => {
+  return await new Promise(resolve => {
     try {
       const tmpPath = path.join(app.getPath('temp'), `raw_${Date.now()}.zpl`);
       fs.writeFileSync(tmpPath, rawData, 'utf8');
       const cmd = `lpr -S localhost -P "${printerName || ''}" "${tmpPath}" && del "${tmpPath}"`;
-      exec(cmd, { shell: 'cmd.exe' }, (err) => {
+      exec(cmd, { shell: 'cmd.exe' }, err => {
         if (err) {
           resolve({ success: false, message: 'Ошибка печати (lpr): ' + err.message });
         } else {
@@ -343,33 +401,44 @@ async function printLabelSmart(options: { labels: string[]; printerName?: string
         }
       });
     } catch (e) {
-      resolve({ success: false, message: 'Ошибка печати (lpr): ' + (e instanceof Error ? e.message : String(e)) });
+      resolve({
+        success: false,
+        message: 'Ошибка печати (lpr): ' + (e instanceof Error ? e.message : String(e)),
+      });
     }
   });
 }
 
 // --- ADD THIS HANDLER FOR print-labels ---
-ipcMain.handle('print-labels', async (_event, options: { labels: string[]; printerName?: string }) => {
-  try {
-    if (!options.labels || !Array.isArray(options.labels) || options.labels.length === 0) {
-      return { success: false, message: 'Нет данных для печати' };
+ipcMain.handle(
+  'print-labels',
+  async (_event, options: { labels: string[]; printerName?: string }) => {
+    try {
+      if (!options.labels || !Array.isArray(options.labels) || options.labels.length === 0) {
+        return { success: false, message: 'Нет данных для печати' };
+      }
+      return await printLabelSmart(options);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Ошибка при печати: ' + (error instanceof Error ? error.message : String(error)),
+      };
     }
-    return await printLabelSmart(options);
-  } catch (error) {
-    return { success: false, message: 'Ошибка при печати: ' + (error instanceof Error ? error.message : String(error)) };
   }
-});
+);
 
 // Функция проверки доступности принтера
-const testPrinterConnection = (printer: PrinterConfig): Promise<{ success: boolean, message: string }> => {
-  return new Promise((resolve) => {
+const testPrinterConnection = (
+  printer: PrinterConfig
+): Promise<{ success: boolean; message: string }> => {
+  return new Promise(resolve => {
     if (printer.connectionType === 'network') {
       testNetworkPrinterConnection(printer, resolve);
     } else {
       console.error(`[TEST] Неизвестный тип подключения принтера: ${printer.connectionType}`);
       resolve({
         success: false,
-        message: `Неизвестный тип подключения принтера: ${printer.connectionType}`
+        message: `Неизвестный тип подключения принтера: ${printer.connectionType}`,
       });
     }
   });
@@ -378,57 +447,64 @@ const testPrinterConnection = (printer: PrinterConfig): Promise<{ success: boole
 // Проверка подключения к сетевому принтеру
 const testNetworkPrinterConnection = (
   printer: PrinterConfig,
-  resolve: (value: { success: boolean, message: string } | PromiseLike<{ success: boolean, message: string }>) => void
+  resolve: (
+    value:
+      | { success: boolean; message: string }
+      | PromiseLike<{ success: boolean; message: string }>
+  ) => void
 ) => {
-  console.log(`[TEST] Проверка соединения с сетевым принтером ${printer.name} (${printer.ip}:${printer.port})...`);
-  
+  console.log(
+    `[TEST] Проверка соединения с сетевым принтером ${printer.name} (${printer.ip}:${printer.port})...`
+  );
+
   const client = new net.Socket();
   let connectionSuccessful = false;
-  
+
   // Устанавливаем таймаут для операции
   const timeout = setTimeout(() => {
     if (!connectionSuccessful) {
       console.log(`[TEST] Таймаут подключения к принтеру ${printer.name}`);
       client.destroy();
-      resolve({ 
-        success: false, 
-        message: `Не удалось подключиться к принтеру ${printer.name}: превышено время ожидания (3 сек)` 
+      resolve({
+        success: false,
+        message: `Не удалось подключиться к принтеру ${printer.name}: превышено время ожидания (3 сек)`,
       });
     }
   }, 3000);
-  
+
   // Пытаемся установить соединение
   try {
     client.connect(printer.port, printer.ip, () => {
       connectionSuccessful = true;
       clearTimeout(timeout);
-      console.log(`[TEST] Успешное подключение к принтеру ${printer.name} (${printer.ip}:${printer.port})`);
-      
+      console.log(
+        `[TEST] Успешное подключение к принтеру ${printer.name} (${printer.ip}:${printer.port})`
+      );
+
       // Закрываем соединение
       client.end();
-      resolve({ 
-        success: true, 
-        message: `Принтер ${printer.name} доступен и готов к печати` 
+      resolve({
+        success: true,
+        message: `Принтер ${printer.name} доступен и готов к печати`,
       });
     });
-    
+
     // Обработка ошибок соединения
     client.on('error', (error: Error) => {
       clearTimeout(timeout);
       console.error(`[TEST] Ошибка подключения к принтеру ${printer.name}: ${error.message}`);
       client.destroy();
-      resolve({ 
-        success: false, 
-        message: `Не удалось подключиться к принтеру ${printer.name}: ${error.message}` 
+      resolve({
+        success: false,
+        message: `Не удалось подключиться к принтеру ${printer.name}: ${error.message}`,
       });
     });
-    
   } catch (error) {
     clearTimeout(timeout);
     console.error(`[TEST] Исключение при проверке принтера ${printer.name}:`, error);
-    resolve({ 
-      success: false, 
-      message: `Ошибка при проверке принтера ${printer.name}: ${error instanceof Error ? error.message : 'неизвестная ошибка'}` 
+    resolve({
+      success: false,
+      message: `Ошибка при проверке принтера ${printer.name}: ${error instanceof Error ? error.message : 'неизвестная ошибка'}`,
     });
   }
 };
@@ -447,8 +523,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   });
 
   mainWindow.once('ready-to-show', () => {
@@ -507,7 +583,12 @@ ipcMain.handle('test-printer-connection', async (_event, printer: PrinterConfig)
     const result = await testPrinterConnection(printer);
     return result;
   } catch (error) {
-    return { success: false, message: 'Ошибка при проверке подключения: ' + (error instanceof Error ? error.message : String(error)) };
+    return {
+      success: false,
+      message:
+        'Ошибка при проверке подключения: ' +
+        (error instanceof Error ? error.message : String(error)),
+    };
   }
 });
 
@@ -520,4 +601,84 @@ ipcMain.handle('get-printers', async () => {
     console.error('[IPC] Ошибка при получении списка принтеров:', error);
     return [];
   }
+});
+
+// Функция для выполнения запросов к API через основной процесс (обходит CORS)
+async function makeApiRequest(options: ApiRequestOptions) {
+  try {
+    console.log(`[API] ${options.method || 'GET'} ${options.endpoint}`);
+
+    const apiConfig = getApiConfig();
+    let url = `${apiConfig.baseUrl}${options.endpoint}`;
+
+    // Добавляем параметры запроса, если они есть
+    if (options.params) {
+      const queryParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(options.params)) {
+        queryParams.append(key, value);
+      }
+      url += `?${queryParams.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      method: options.method || 'GET',
+      headers: apiConfig.headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    // Проверяем успешность запроса
+    if (!response.ok) {
+      const errorStatus = response.status;
+      let errorText = '';
+
+      try {
+        // Пробуем прочитать ошибку как JSON
+        const errorData = await response.json();
+        errorText = errorData.message || `${response.statusText}`;
+      } catch {
+        // Если не удалось прочитать как JSON, получаем текст
+        errorText = await response.text().catch(() => 'Unknown error');
+      }
+
+      console.error(`[API] HTTP error: ${errorStatus} - ${errorText}`);
+      return { success: false, error: errorText, status: errorStatus };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('[API] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown API error',
+    };
+  }
+}
+
+// IPC обработчики для API
+ipcMain.handle('fetch-orders', async (_event, status?: string) => {
+  const params: Record<string, string> = {};
+  if (status) {
+    params.status = status;
+  }
+
+  return await makeApiRequest({
+    endpoint: API_ENDPOINTS.orders,
+    params,
+  });
+});
+
+ipcMain.handle('archive-order', async (_event, id: string) => {
+  return await makeApiRequest({
+    endpoint: `${API_ENDPOINTS.archive}/${id}`,
+    method: 'PATCH',
+  });
+});
+
+ipcMain.handle('update-order-status', async (_event, id: string, status: string) => {
+  return await makeApiRequest({
+    endpoint: `${API_ENDPOINTS.orders}/${id}`,
+    method: 'PATCH',
+    body: { status },
+  });
 });

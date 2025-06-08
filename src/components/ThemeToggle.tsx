@@ -6,7 +6,7 @@ const ThemeToggle: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <button 
+    <button
       onClick={toggleTheme}
       className="p-2 rounded-full transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
       aria-label={theme === 'light' ? 'Переключить на темную тему' : 'Переключить на светлую тему'}

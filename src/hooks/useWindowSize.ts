@@ -23,7 +23,7 @@ const useWindowSize = (): WindowSize => {
     height: undefined,
     isMobile: false,
     isTablet: false,
-    isDesktop: false
+    isDesktop: false,
   });
 
   useEffect(() => {
@@ -31,22 +31,22 @@ const useWindowSize = (): WindowSize => {
     const handleResize = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
-      
+
       setWindowSize({
         width,
         height,
         isMobile: width < MOBILE_BREAKPOINT,
         isTablet: width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT,
-        isDesktop: width >= TABLET_BREAKPOINT
+        isDesktop: width >= TABLET_BREAKPOINT,
       });
     };
 
     // Добавляем прослушиватель событий
     window.addEventListener('resize', handleResize);
-    
+
     // Вызываем функцию на монтирование компонента
     handleResize();
-    
+
     // Очистка при размонтировании
     return () => window.removeEventListener('resize', handleResize);
   }, []);

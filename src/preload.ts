@@ -59,16 +59,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Функция для сохранения конфигурации принтера
-  savePrinterConfig: (config: PrinterConfig[]): Promise<{
+  savePrinterConfig: (
+    config: PrinterConfig[]
+  ): Promise<{
     success: boolean;
     message: string;
     loadedConfig?: PrinterConfig[];
   }> => {
     return ipcRenderer.invoke('save-printer-config', config);
   },
-  
+
   // Функция для проверки подключения к принтеру
-  testPrinterConnection: (printerConfig: PrinterConfig): Promise<{ success: boolean, message: string }> => {
+  testPrinterConnection: (
+    printerConfig: PrinterConfig
+  ): Promise<{ success: boolean; message: string }> => {
     return ipcRenderer.invoke('test-printer-connection', printerConfig);
   },
 
@@ -76,7 +80,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSystemPrinters: () => ipcRenderer.invoke('get-system-printers'),
 
   // Печать сырого текста на принтере
-  printRawToPrinter: (printerName: string, rawData: string) => ipcRenderer.invoke('print-raw-to-printer', printerName, rawData),
+  printRawToPrinter: (printerName: string, rawData: string) =>
+    ipcRenderer.invoke('print-raw-to-printer', printerName, rawData),
 
   // Получить список последовательных портов
   getSerialPorts: (): Promise<SerialPortInfo[]> => {
@@ -84,12 +89,48 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Тестировать последовательный порт
-  testSerialPort: (printerConfig: PrinterConfig): Promise<{ success: boolean, message: string }> => {
+  testSerialPort: (
+    printerConfig: PrinterConfig
+  ): Promise<{ success: boolean; message: string }> => {
     return ipcRenderer.invoke('test-serial-port', printerConfig);
   },
 
   // Получить расширенную информацию о последовательных портах
   getEnhancedSerialPortInfo: (): Promise<SerialPortInfo[]> => {
     return ipcRenderer.invoke('get-enhanced-serial-port-info');
+  },
+  // API методы (обход CORS)
+  fetchOrders: (
+    status?: string
+  ): Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+    status?: number;
+  }> => {
+    return ipcRenderer.invoke('fetch-orders', status);
+  },
+
+  archiveOrder: (
+    id: string
+  ): Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+    status?: number;
+  }> => {
+    return ipcRenderer.invoke('archive-order', id);
+  },
+
+  updateOrderStatus: (
+    id: string,
+    status: string
+  ): Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+    status?: number;
+  }> => {
+    return ipcRenderer.invoke('update-order-status', id, status);
   },
 });

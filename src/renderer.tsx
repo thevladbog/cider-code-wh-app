@@ -8,15 +8,15 @@ console.log('Starting React render process');
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM fully loaded');
-  
+
   const rootElement = document.getElementById('root');
   console.log('Root element:', rootElement);
-  
+
   if (rootElement) {
     console.log('Mounting React app to root element');
-    
+
     const root = createRoot(rootElement);
-    
+
     root.render(
       <React.StrictMode>
         <App />

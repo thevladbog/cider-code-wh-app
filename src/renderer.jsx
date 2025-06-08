@@ -7,15 +7,15 @@ console.log('Starting React render process');
 
 function render() {
   console.log('Attempting to render React app');
-  
+
   const rootElement = document.getElementById('root');
   console.log('Root element found:', rootElement);
-  
+
   if (rootElement) {
     try {
       const root = ReactDOM.createRoot(rootElement);
       console.log('Root created');
-      
+
       root.render(
         <React.StrictMode>
           <App />

@@ -11,17 +11,20 @@ const queryClient = new QueryClient();
 
 const App: React.FC = () => {
   const [isPrinterSettingsOpen, setIsPrinterSettingsOpen] = useState(false);
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app min-h-screen transition-colors dark:bg-gray-900 dark:text-white">
         {/* Основной интерфейс */}
         <MainScreen />
         <Modal />
-        <PrinterSettings isOpen={isPrinterSettingsOpen} onClose={() => setIsPrinterSettingsOpen(false)} />
-        
+        <PrinterSettings
+          isOpen={isPrinterSettingsOpen}
+          onClose={() => setIsPrinterSettingsOpen(false)}
+        />
+
         {/* Кнопка настроек принтера */}
-        <button 
+        <button
           onClick={() => setIsPrinterSettingsOpen(true)}
           className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 p-3 rounded-full shadow-md hover:shadow-lg transition-colors"
           aria-label="Настройки принтера"

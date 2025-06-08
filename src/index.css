@@ -3,8 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
   width: 100%;
@@ -85,7 +84,7 @@ button:focus-visible {
     user-select: none; /* Предотвращает выделение текста */
     -webkit-tap-highlight-color: transparent; /* Убирает подсветку при нажатии на iOS */
   }
-  
+
   .numpad-button:active {
     @apply bg-gray-300 shadow-inner transform scale-95;
     transition: transform 0.1s ease-in-out;

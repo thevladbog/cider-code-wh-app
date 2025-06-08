@@ -36,7 +36,7 @@ export const useTheme = () => {
   // Применяем тему к документу при изменении
   useEffect(() => {
     const root = window.document.documentElement;
-    
+
     // Удаляем предыдущий класс и добавляем новый
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
