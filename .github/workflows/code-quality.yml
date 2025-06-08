@@ -29,12 +29,8 @@ jobs:
     - name: TypeScript Check
       run: npx tsc --noEmit
       
-    # Опционально можно добавить проверку на форматирование, если в проекте используется prettier
+    # Проверка форматирования с помощью Prettier
     - name: Check formatting
-      run: |
-        if [ -f ".prettierrc" ] || [ -f ".prettierrc.js" ] || [ -f ".prettierrc.json" ]; then
-          npx prettier --check "src/**/*.{ts,tsx,js,jsx}"
-        else
-          echo "Prettier configuration not found, skipping format check"
-        fi
+      run: npm run format:check
+      # Если вы хотите, чтобы ошибки форматирования приводили к неудачной сборке, удалите следующую строку
       continue-on-error: true
