@@ -268,7 +268,10 @@ export default function CertificateManager() {
   };
 
   return (
-    <div className="p-4">
+    <div
+      className="p-4 max-h-[calc(100vh-4rem)] overflow-y-auto show-scrollbar-on-hover"
+      style={{ height: 'calc(100vh - 4rem)' }}
+    >
       <h2 className="text-2xl font-bold mb-4">Управление TLS-сертификатами</h2>
 
       {loading && <p className="text-gray-500">Загрузка информации о сертификате...</p>}
@@ -295,10 +298,10 @@ export default function CertificateManager() {
         </p>
       </div>
 
-      <div className="border-t pt-4">
+      <div className="border-t pt-4 mt-4">
         <h3 className="text-xl font-semibold mb-3">Загрузка сертификатов вручную</h3>
 
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[50vh] overflow-y-auto show-scrollbar-on-hover p-1">
           <div>
             <label className="block text-sm font-medium mb-1">Сертификат (cert.pem)</label>
             <input

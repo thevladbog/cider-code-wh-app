@@ -78,7 +78,7 @@ const ModalOrderSearch: React.FC<ModalOrderSearchProps> = ({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="modal dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-y-auto"
         onClick={e => e.stopPropagation()}
         tabIndex={0}
         style={{ maxWidth: 400, width: '100%' }}

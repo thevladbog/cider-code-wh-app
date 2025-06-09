@@ -104,3 +104,5 @@ certs/
 .env.production
 
 secure-certs/
+
+tls-status.*
