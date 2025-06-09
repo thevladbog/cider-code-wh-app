@@ -19,7 +19,11 @@ export function registerCertificateAPI() {
         return await ipcRenderer.invoke('certificate:check-and-update');
       },
 
-      uploadCertificate: async (options: { certData: string; keyData: string; caData?: string }): Promise<{success: boolean; error?: string; certInfo?: CertificateInfo}> => {
+      uploadCertificate: async (options: {
+        certData: string;
+        keyData: string;
+        caData?: string;
+      }): Promise<{ success: boolean; error?: string; certInfo?: CertificateInfo }> => {
         return await ipcRenderer.invoke('certificate:upload', options);
       },
 
@@ -37,7 +41,11 @@ export function registerCertificateAPI() {
       checkAndUpdateCertificates: async (): Promise<boolean> => {
         return await ipcRenderer.invoke('certificate:check-and-update');
       },
-      uploadCertificate: async (options: { certData: string; keyData: string; caData?: string }): Promise<{success: boolean; error?: string; certInfo?: CertificateInfo}> => {
+      uploadCertificate: async (options: {
+        certData: string;
+        keyData: string;
+        caData?: string;
+      }): Promise<{ success: boolean; error?: string; certInfo?: CertificateInfo }> => {
         return await ipcRenderer.invoke('certificate:upload', options);
       },
 
