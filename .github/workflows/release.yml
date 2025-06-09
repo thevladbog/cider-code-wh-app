@@ -76,14 +76,14 @@ jobs:
       - name: Install certificate dependencies for production
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Installing certbot and dependencies..."
+          echo "📦 Installing certbot and dependencies..."
           sudo apt-get update
           sudo apt-get install -y certbot python3-certbot-dns-cloudflare openssl
       
       - name: Validate CI environment for certificate generation
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Validating CI environment for certificate generation..."
+          echo "🔍 Validating CI environment for certificate generation..."
           node scripts/validate-ci-environment.cjs
         env:
           DOMAIN_NAME: ${{ secrets.PRODUCTION_DOMAIN_NAME }}
@@ -93,7 +93,7 @@ jobs:
       - name: Generate production certificates for stable release
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Generating production TLS certificates..."
+          echo "🔐 Generating production TLS certificates..."
           node scripts/generate-production-certs.cjs
         env:
           DOMAIN_NAME: ${{ secrets.PRODUCTION_DOMAIN_NAME }}
@@ -103,36 +103,52 @@ jobs:
       - name: Verify certificate generation
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Verifying generated certificates..."
+          echo "🔍 Verifying generated certificates..."
           if [ ! -f "certs/cert.pem" ] || [ ! -f "certs/key.pem" ] || [ ! -f "certs/ca.pem" ]; then
-            echo " Certificate files not found!"
+            echo "❌ Certificate files not found!"
             exit 1
           fi
           
-          echo " Certificate information:"
+          echo "📋 Certificate information:"
           openssl x509 -in certs/cert.pem -noout -subject -issuer -dates
           
-          echo " Certificate files generated:"
+          echo "🔒 Certificate files generated:"
           ls -la certs/
-          echo " Certificate generation completed successfully"
+          echo "✅ Certificate generation completed successfully"
       
-      - name: Upload production certificates
+      - name: Install certificate archiving tools
+        if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
+        run: |
+          echo "📦 Installing tools for secure certificate archiving..."
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full zip
+      
+      - name: Secure certificates with password
+        if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
+        id: secure-certs
+        run: |
+          echo "🔒 Securing certificates with password protection..."
+          node scripts/secure-certificates.cjs
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ needs.version.outputs.new_version }}
+
+      - name: Upload secure certificates
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: production-certificates-${{ needs.version.outputs.new_version }}
+          name: secure-certificates-${{ needs.version.outputs.new_version }}
           path: |
-            certs/cert.pem
-            certs/key.pem
-            certs/ca.pem
+            secure-certs/*.zip
           retention-days: 7
       
       - name: Note about certificates for other platforms
         if: needs.version.outputs.release_type == 'stable' && runner.os != 'Linux'
         run: |
-          echo " Production certificates are generated on Linux runner only"
-          echo " Certificates will be available as artifacts for deployment"
-          echo " Download certificates artifact and deploy to production server"
+          echo "📝 Production certificates are generated on Linux runner only"
+          echo "🔒 Certificates will be available as artifacts for deployment"
+          echo "💡 Download certificates artifact and deploy to production server"
       
       - name: Build and make application
         run: npm run make
@@ -188,29 +204,42 @@ jobs:
           body: |
             ## Release Notes
             
-            ###  New Version: v${{ needs.version.outputs.new_version }}
+            ### 🚀 New Version: v${{ needs.version.outputs.new_version }}
             
-            ###  Downloads
+            ### 📦 Downloads
             - **Windows**: .exe installer and .zip archive
             - **Linux**: .deb and .rpm packages + .zip archive  
             - **macOS**: .dmg installer and .zip archive
             
-            ###  Security Note
-            This build includes production-ready TLS certificates generated via Let's Encrypt.
-            Certificates are available as separate artifacts for deployment.
+            ### 🔒 Security Note
+            This build includes password-protected TLS certificates generated via Let's Encrypt.
+            Certificates are archived with encryption, and the password is sent to a secure Telegram channel.
+            Contact your system administrator to obtain the password for certificate extraction.
             
-            ###  Installation Notes
+            ### 📋 Installation Notes
             1. Download the appropriate package for your platform
-            2. Download the production certificates artifact if needed
-            3. Install the application
-            4. Deploy certificates to /certs/ directory on production server
-            5. Run the application
+            2. Download the secure certificates archive if needed
+            3. Obtain the password from the administrator (sent via secure Telegram channel)
+            4. Extract the certificates using the provided password:
+               ```
+               # Linux/macOS
+               unzip -P "your-password" secure-certificates-v*.zip -d ./certs/
+               chmod 600 ./certs/key.pem
+               chmod 644 ./certs/cert.pem ./certs/ca.pem
+               
+               # Windows PowerShell
+               Expand-Archive -Path "secure-certificates-v*.zip" -DestinationPath "./certs/" 
+               # (will prompt for password)
+               ```
+            5. Install the application
+            6. Deploy extracted certificates to /certs/ directory on production server
+            7. Run the application
             
             For certificate setup, see documentation in the repository.
           files: |
             windows-release-${{ needs.version.outputs.new_version }}/**/*
             linux-release-${{ needs.version.outputs.new_version }}/**/*
             macos-release-${{ needs.version.outputs.new_version }}/**/*
-            production-certificates-${{ needs.version.outputs.new_version }}/**/*
+            secure-certificates-${{ needs.version.outputs.new_version }}/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -87,7 +87,7 @@ export default function CertificateManager() {
       const keyData = await readFileAsText(uploadFiles.key);
       const caData = uploadFiles.ca ? await readFileAsText(uploadFiles.ca) : undefined;
       // Вызываем IPC метод для загрузки сертификатов
-      const result = await window.electronAPI?.uploadCertificates({
+      const result = await window.electronAPI?.uploadCertificate({
         certData,
         keyData,
         caData,
