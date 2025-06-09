@@ -72,6 +72,12 @@ jobs:
           node scripts/generate-dev-certs.cjs
         env:
           DOMAIN_NAME: localhost
+      - name: Install certificate dependencies for production
+        if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
+        run: |
+          echo "📦 Installing certbot and dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y certbot python3-certbot-dns-cloudflare openssl
       
       - name: Validate CI environment for certificate generation
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
@@ -82,13 +88,6 @@ jobs:
           DOMAIN_NAME: ${{ secrets.PRODUCTION_DOMAIN_NAME }}
           ACME_EMAIL: ${{ secrets.ACME_EMAIL }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      
-      - name: Install certificate dependencies for production
-        if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
-        run: |
-          echo "📦 Installing certbot and dependencies..."
-          sudo apt-get update
-          sudo apt-get install -y certbot python3-certbot-dns-cloudflare openssl
       
       - name: Generate production certificates for stable release
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
