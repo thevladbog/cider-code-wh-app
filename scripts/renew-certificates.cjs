@@ -12,6 +12,7 @@ const { execSync } = require('child_process');
 // Получаем переменные окружения
 const DOMAIN_NAME = process.env.DOMAIN_NAME;
 const ACME_EMAIL = process.env.ACME_EMAIL;
+const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CERT_PATH = process.env.CERT_PATH || path.join(process.cwd(), 'certs');
 const WEBROOT_PATH = process.env.WEBROOT_PATH || '/var/www/html';
 const DAYS_BEFORE_EXPIRY = parseInt(process.env.DAYS_BEFORE_EXPIRY || '30');
