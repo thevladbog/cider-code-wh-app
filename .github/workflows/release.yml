@@ -164,7 +164,7 @@ jobs:
         with:
           name: macos-release-${{ needs.version.outputs.new_version }}
           path: |
-            out/make/dmg/x64/*.dmg
+            out/make/dmg/darwin/x64/*.dmg
             out/make/zip/darwin/x64/*.zip
           retention-days: 30
 
