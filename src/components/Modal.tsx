@@ -299,7 +299,6 @@ const Modal: React.FC = () => {
             <span>Отмена</span>
           </button>
 
-
           <button
             onClick={handleArchiveWithoutPrint}
             className="flex items-center justify-center bg-amber-500 hover:bg-amber-600 active:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700 dark:active:bg-amber-800 text-white font-bold py-4 px-6 rounded-lg shadow-sm touch-manipulation min-w-[150px] transition-colors"

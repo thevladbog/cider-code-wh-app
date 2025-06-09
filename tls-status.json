@@ -1,11 +1,11 @@
 {
-  "lastConnection": "2025-06-09T00:32:24.357Z",
+  "lastConnection": "2025-06-09T06:39:41.094Z",
   "lastError": null,
   "certificateInfo": {
-    "valid": false,
-    "expiration": null,
-    "issuer": null,
-    "domain": null
+    "valid": true,
+    "expiration": "2026-06-08T23:03:33.000Z",
+    "issuer": "localhost",
+    "domain": "localhost"
   },
   "connections": {
     "total": 1,

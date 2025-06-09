@@ -83,7 +83,7 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
           try {
             // Пытаемся создать объект Date из строки
             deliveryDateObj = new Date(deliveryDate);
-            
+
             // Проверяем, что дата валидна
             if (!isNaN(deliveryDateObj.getTime())) {
               deliveryDateBarcode = format(deliveryDateObj, 'ddMMyy');

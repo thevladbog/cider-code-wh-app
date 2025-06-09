@@ -9,17 +9,17 @@ import { getEnvironment } from '../config/environment';
  */
 export function useApiInitialization(intervalMs = 60000) {
   const { fetchTlsStatus } = useStore();
-  
+
   // Инициализируем API и TLS при запуске приложения
   useEffect(() => {
     // Получаем начальный статус TLS
     fetchTlsStatus();
-    
+
     // Настраиваем периодическую проверку
     const intervalId = setInterval(() => {
       fetchTlsStatus();
     }, intervalMs);
-    
+
     // Очищаем интервал при размонтировании
     return () => {
       clearInterval(intervalId);

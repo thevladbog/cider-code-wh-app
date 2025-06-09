@@ -1,25 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockOrders } from '../../src/models/orders';
-import * as API from '../../src/services/api';
 import { useStore } from '../../src/store';
 
-// Мокаем API для интеграционных тестов
-vi.mock('../../src/services/api', () => ({
-  fetchOrders: vi.fn(async (status) => {
-    if (status === 'ARCHIVE') {
-      return Promise.resolve(mockOrders.filter(order => order.status === 'ARCHIVE'));
-    }
-    return Promise.resolve(mockOrders.filter(order => order.status === 'NEW'));
-  }),
-  archiveOrder: vi.fn(async () => {
-    return Promise.resolve(true);
-  })
-}));
+// Mock window.electronAPI for integration tests
+const mockElectronAPI = {
+  fetchOrders: vi.fn(),
+  archiveOrder: vi.fn(),
+  getTlsStatus: vi.fn()
+};
 
 describe('Orders Integration', () => {
   // Настраиваем состояние перед каждым тестом
   beforeEach(() => {
     vi.resetAllMocks();
+    
+    // Setup window.electronAPI mock
+    vi.stubGlobal('window', {
+      electronAPI: mockElectronAPI
+    });
+    
+    // Setup electronAPI mock implementations
+    mockElectronAPI.fetchOrders.mockImplementation(async (status) => {
+      if (status === 'ARCHIVE') {
+        return Promise.resolve({ 
+          success: true, 
+          data: mockOrders.filter(order => order.status === 'ARCHIVE') 
+        });
+      }
+      return Promise.resolve({ 
+        success: true, 
+        data: mockOrders.filter(order => order.status === 'NEW') 
+      });
+    });
+    
+    mockElectronAPI.archiveOrder.mockResolvedValue({ success: true });
+    mockElectronAPI.getTlsStatus.mockResolvedValue({
+      isConnected: true,
+      lastChecked: new Date().toISOString()
+    });
     
     // Сбрасываем состояние хранилища Zustand
     useStore.setState({
@@ -28,17 +46,19 @@ describe('Orders Integration', () => {
       selectedOrder: null,
       showArchive: false,
       isLoading: false,
-      error: null
+      error: null,
+      tlsStatus: null,
+      tlsStatusLoading: false,
+      tlsStatusError: null
     });
   });
-
   it('should fetch orders and update store state', async () => {
     // Вызываем метод из хранилища
     await useStore.getState().fetchOrders();
     
-    // Проверяем, что API был вызван
-    expect(API.fetchOrders).toHaveBeenCalledWith('NEW');
-    expect(API.fetchOrders).toHaveBeenCalledWith('ARCHIVE');
+    // Проверяем, что electronAPI был вызван
+    expect(mockElectronAPI.fetchOrders).toHaveBeenCalledWith('NEW');
+    expect(mockElectronAPI.fetchOrders).toHaveBeenCalledWith('ARCHIVE');
     
     // Проверяем обновление хранилища
     const store = useStore.getState();
@@ -47,8 +67,7 @@ describe('Orders Integration', () => {
     expect(store.orders[0].status).toBe('NEW');
     expect(store.archivedOrders[0].status).toBe('ARCHIVE');
   });
-  
-  it('should archive an order', async () => {
+    it('should archive an order', async () => {
     // Сначала загружаем данные
     await useStore.getState().fetchOrders();
     
@@ -61,8 +80,8 @@ describe('Orders Integration', () => {
     // Архивируем заказ
     await initialState.archiveOrder(orderToArchive.id);
     
-    // Проверяем, что API был вызван
-    expect(API.archiveOrder).toHaveBeenCalledWith(orderToArchive.id);
+    // Проверяем, что electronAPI был вызван
+    expect(mockElectronAPI.archiveOrder).toHaveBeenCalledWith(orderToArchive.id);
     
     // Проверяем состояние хранилища
     const updatedState = useStore.getState();

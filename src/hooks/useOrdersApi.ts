@@ -20,18 +20,18 @@ export const QUERY_KEYS = {
  */
 export function useOrders(status?: 'NEW' | 'ARCHIVE', pollingInterval = 30000, enabled = true) {
   const { fetchTlsStatus } = useStore();
-  
+
   return useQuery(
-    QUERY_KEYS.ordersByStatus(status || 'all'), 
+    QUERY_KEYS.ordersByStatus(status || 'all'),
     async () => {
       // Получаем заказы из API
       const orders = await API.fetchOrders(status);
-      
+
       // После каждого успешного запроса обновляем статус TLS
       fetchTlsStatus();
-      
+
       return orders;
-    }, 
+    },
     {
       refetchInterval: pollingInterval,
       refetchIntervalInBackground: false,
@@ -122,7 +122,7 @@ export function useUpdateOrderStatus() {
         queryClient.invalidateQueries(QUERY_KEYS.allOrders);
         queryClient.invalidateQueries(QUERY_KEYS.ordersByStatus('NEW'));
         queryClient.invalidateQueries(QUERY_KEYS.ordersByStatus('ARCHIVE'));
-        
+
         // Обновляем статус TLS после каждой операции с API
         fetchTlsStatus();
       },
@@ -135,25 +135,25 @@ export function useUpdateOrderStatus() {
  */
 export function useTlsStatus(pollingInterval = 60000) {
   const { tlsStatus, tlsStatusLoading, tlsStatusError, fetchTlsStatus } = useStore();
-  
+
   // Запускаем периодическое обновление статуса TLS
   useEffect(() => {
     // Первоначальное получение статуса
     fetchTlsStatus();
-    
+
     // Настраиваем интервал для периодического обновления
     const intervalId = setInterval(() => {
       fetchTlsStatus();
     }, pollingInterval);
-    
+
     // Очищаем интервал при размонтировании компонента
     return () => clearInterval(intervalId);
   }, [fetchTlsStatus, pollingInterval]);
-  
+
   return {
     tlsStatus,
     tlsStatusLoading,
     tlsStatusError,
-    refreshTlsStatus: fetchTlsStatus
+    refreshTlsStatus: fetchTlsStatus,
   };
 }

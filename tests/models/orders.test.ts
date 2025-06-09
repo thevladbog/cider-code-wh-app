@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Order, mockOrders } from '../../src/models/orders';
+import { mockOrders } from '../../src/models/orders';
 
 describe('Order Model', () => {
   describe('Order Interface', () => {

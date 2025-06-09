@@ -1,10 +1,16 @@
 import React from 'react';
 import { useStore } from '../store';
-import { CalendarIcon, ArchiveBoxIcon, ArrowPathIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import {
+  CalendarIcon,
+  ArchiveBoxIcon,
+  ArrowPathIcon,
+  ShieldCheckIcon,
+} from '@heroicons/react/24/outline';
 import { useWindowSize } from '../hooks/useWindowSize';
 import ModalOrderSearch from './ModalOrderSearch';
 import { useOrders } from '../hooks/useOrdersApi';
 import CertificateManager from './CertificateManager';
+import WindowDemo from './WindowDemo';
 
 const MainScreen: React.FC = () => {
   const { setSelectedOrder, showArchive, toggleArchiveView } = useStore();
@@ -71,22 +77,22 @@ const MainScreen: React.FC = () => {
           <div className="flex items-center space-x-4">
             {/* Вкладки для навигации */}
             <div className="flex bg-blue-600 dark:bg-blue-800 rounded-lg overflow-hidden shadow-sm">
-              <button 
+              <button
                 onClick={() => setActiveTab('orders')}
                 className={`px-4 py-2 ${
-                  activeTab === 'orders' 
-                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium' 
+                  activeTab === 'orders'
+                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium'
                     : 'text-white hover:bg-blue-700 dark:hover:bg-blue-850'
                 } transition-colors flex items-center space-x-2`}
               >
                 <ArchiveBoxIcon className="h-5 w-5" />
                 <span>Заказы</span>
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('certificates')}
                 className={`px-4 py-2 ${
-                  activeTab === 'certificates' 
-                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium' 
+                  activeTab === 'certificates'
+                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium'
                     : 'text-white hover:bg-blue-700 dark:hover:bg-blue-850'
                 } transition-colors flex items-center space-x-2`}
               >
@@ -95,7 +101,7 @@ const MainScreen: React.FC = () => {
               </button>
             </div>
           </div>
-          
+
           {activeTab === 'orders' && (
             <div className="flex space-x-3">
               <button
@@ -136,14 +142,21 @@ const MainScreen: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {activeTab === 'orders' && (
           <p className="text-sm mt-2">{showArchive ? 'Архив заказов' : 'Активные заказы'}</p>
         )}
       </header>
-      
+
       {/* Основной контент */}
       <main className="flex-grow p-4 overflow-y-auto">
+        {/* Демонстрация управления окном - только в development режиме */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-6">
+            <WindowDemo />
+          </div>
+        )}
+
         {activeTab === 'orders' ? (
           // Контент для вкладки заказов
           isLoading ? (
@@ -162,10 +175,10 @@ const MainScreen: React.FC = () => {
                 isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-3' : 'grid-cols-4'
               }`}
             >
-            {displayedOrders.map(order => (
-              <div
-                key={order.id}
-                className={`
+              {displayedOrders.map(order => (
+                <div
+                  key={order.id}
+                  className={`
                   p-4 rounded-xl shadow-md border-2 relative overflow-hidden
                   ${!showArchive ? 'cursor-pointer active:bg-blue-50 dark:active:bg-blue-900 touch-manipulation' : ''} 
                   ${
@@ -175,62 +188,67 @@ const MainScreen: React.FC = () => {
                   } 
                   transition-all duration-300 bg-white dark:bg-opacity-10 dark:bg-gray-800 dark:backdrop-blur-sm dark:shadow-dark-card
                 `}
-                onClick={() => !showArchive && setSelectedOrder(order)}
-                style={{ minHeight: '120px' }}
-              >
-                {/* Декоративный элемент для темной темы */}
-                <div className="hidden dark:block absolute top-0 left-0 w-2 h-full bg-blue-500 bg-gradient-to-b from-blue-400 to-blue-600"></div>
-                <div className="dark:pl-3">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold dark:text-white dark:bg-gradient-to-r dark:from-blue-400 dark:to-blue-200 dark:bg-clip-text dark:text-transparent">
-                      Заказ #{order.orderNumber}
-                    </h3>
-                    <span
-                      className={`text-sm px-3 py-1 rounded-full ${
-                        order.status === 'NEW'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 dark:ring-1 dark:ring-green-500'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 dark:ring-1 dark:ring-gray-500'
-                      }`}
-                    >
-                      {order.status === 'NEW' ? 'Новый' : 'В архиве'}
-                    </span>
-                  </div>
-                  <div className="flex items-center mt-2 text-gray-600 dark:text-gray-300">
-                    <CalendarIcon className="h-5 w-5 mr-2 flex-shrink-0" />
-                    <span>Дата отгрузки: {new Date(order.deliveryDate).toLocaleDateString()}</span>
-                  </div>
-                  <div className="mt-2 text-gray-600 dark:text-gray-300">
-                    <p className="truncate text-sm">Получатель: {order.consignee}</p>
-                    <p className="text-sm leading-tight" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-                      Адрес: {order.address.replace(/,\s*/g, ',\n')}
-                    </p>
-                  </div>
-                  {!showArchive && (
-                    <div className="mt-3 text-blue-600 dark:text-blue-400 text-sm font-medium flex items-center">
-                      <span className="inline-flex items-center">
-                        Нажмите для печати этикеток
-                        <span className="ml-1 inline-block animate-pulse dark:text-blue-300">
-                          →
-                        </span>
+                  onClick={() => !showArchive && setSelectedOrder(order)}
+                  style={{ minHeight: '120px' }}
+                >
+                  {/* Декоративный элемент для темной темы */}
+                  <div className="hidden dark:block absolute top-0 left-0 w-2 h-full bg-blue-500 bg-gradient-to-b from-blue-400 to-blue-600"></div>
+                  <div className="dark:pl-3">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-xl font-bold dark:text-white dark:bg-gradient-to-r dark:from-blue-400 dark:to-blue-200 dark:bg-clip-text dark:text-transparent">
+                        Заказ #{order.orderNumber}
+                      </h3>
+                      <span
+                        className={`text-sm px-3 py-1 rounded-full ${
+                          order.status === 'NEW'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 dark:ring-1 dark:ring-green-500'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 dark:ring-1 dark:ring-gray-500'
+                        }`}
+                      >
+                        {order.status === 'NEW' ? 'Новый' : 'В архиве'}
                       </span>
                     </div>
+                    <div className="flex items-center mt-2 text-gray-600 dark:text-gray-300">
+                      <CalendarIcon className="h-5 w-5 mr-2 flex-shrink-0" />
+                      <span>
+                        Дата отгрузки: {new Date(order.deliveryDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-gray-600 dark:text-gray-300">
+                      <p className="truncate text-sm">Получатель: {order.consignee}</p>
+                      <p
+                        className="text-sm leading-tight"
+                        style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                      >
+                        Адрес: {order.address.replace(/,\s*/g, ',\n')}
+                      </p>
+                    </div>
+                    {!showArchive && (
+                      <div className="mt-3 text-blue-600 dark:text-blue-400 text-sm font-medium flex items-center">
+                        <span className="inline-flex items-center">
+                          Нажмите для печати этикеток
+                          <span className="ml-1 inline-block animate-pulse dark:text-blue-300">
+                            →
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {showArchive && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        setSelectedOrder(order); // Открыть модалку с вводом количества
+                      }}
+                      className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow text-sm font-medium"
+                    >
+                      Распечатать повторно
+                    </button>
                   )}
                 </div>
-                {showArchive && (
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      setSelectedOrder(order); // Открыть модалку с вводом количества
-                    }}
-                    className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow text-sm font-medium"
-                  >
-                    Распечатать повторно
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )
+              ))}
+            </div>
+          )
         ) : (
           // Компонент управления сертификатами
           <CertificateManager />

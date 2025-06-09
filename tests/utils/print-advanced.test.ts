@@ -66,7 +66,7 @@ describe('Advanced Print Utils Testing', () => {
       expect(labelContent).toContain('ORD-123');
       expect(labelContent).toContain('ACME Corp');
       expect(labelContent).toContain('123 Main St, City');
-      expect(labelContent).toContain('2023-01-01');
+      expect(labelContent).toContain('01.01. 2023 г.');
     });
   });
 

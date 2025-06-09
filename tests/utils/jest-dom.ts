@@ -9,7 +9,7 @@ import { expect } from 'vitest';
 
 // Расширяем интерфейс Assertion для добавления матчеров в стиле Jest DOM
 declare module 'vitest' {
-  interface Assertion<T> {
+  interface Assertion {
     // Проверяет, что элемент присутствует в DOM
     toBeInTheDocument(): void;
     // Проверяет, что элемент содержит указанный класс

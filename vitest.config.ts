@@ -19,6 +19,9 @@ export default defineConfig({
     mockReset: true,
     restoreMocks: true,
     clearMocks: true,
+    // Fix for React 18 concurrent features in tests
+    pool: 'forks',
+    isolate: true,
     coverage: {
       provider: 'v8', // используем новый провайдер для более точного покрытия
       reporter: ['text', 'json', 'html'],

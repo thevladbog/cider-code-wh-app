@@ -45,7 +45,7 @@ export const mockFetchOrders = vi.fn(async (status?: string): Promise<Order[]> =
 });
 
 // Мок для archiveOrder
-export const mockArchiveOrder = vi.fn(async (id: string): Promise<boolean> => {
+export const mockArchiveOrder = vi.fn(async (): Promise<boolean> => {
   return true;
 });
 

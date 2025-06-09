@@ -2,16 +2,14 @@
  * IPC методы для управления сертификатами
  */
 
-import { ipcMain , app } from 'electron';
+import { ipcMain } from 'electron';
 
-import path from 'node:path';
 import fs from 'node:fs';
-import { 
-  validateCertificate, 
-  checkAndUpdateCertificates, 
+import {
+  validateCertificate,
+  checkAndUpdateCertificates,
   startCertificateMonitoring,
   updateCertificates,
-  CertificateInfo
 } from '../utils/cert-manager';
 import { getCertsPaths } from '../config/tls.config';
 
@@ -70,29 +68,32 @@ export function registerCertificateIPCHandlers() {
 
       return {
         success: true,
-        certInfo
+        certInfo,
       };
     } catch (error) {
       console.error('[IPC] Ошибка загрузки сертификатов:', error);
       return {
         success: false,
-        error: error.message || 'Неизвестная ошибка'
+        error: error.message || 'Неизвестная ошибка',
       };
     }
   });
 
   // Запуск мониторинга сертификатов
-  ipcMain.handle('certificate:start-monitoring', async (_, intervalMs?: number, updateSource?: string) => {
-    try {
-      const interval = intervalMs || 24 * 60 * 60 * 1000; // По умолчанию 24 часа
-      startCertificateMonitoring(interval, !!updateSource, updateSource);
-      return { success: true };
-    } catch (error) {
-      console.error('[IPC] Ошибка запуска мониторинга сертификатов:', error);
-      return {
-        success: false,
-        error: error.message || 'Неизвестная ошибка'
-      };
+  ipcMain.handle(
+    'certificate:start-monitoring',
+    async (_, intervalMs?: number, updateSource?: string) => {
+      try {
+        const interval = intervalMs || 24 * 60 * 60 * 1000; // По умолчанию 24 часа
+        startCertificateMonitoring(interval, !!updateSource, updateSource);
+        return { success: true };
+      } catch (error) {
+        console.error('[IPC] Ошибка запуска мониторинга сертификатов:', error);
+        return {
+          success: false,
+          error: error.message || 'Неизвестная ошибка',
+        };
+      }
     }
-  });
+  );
 }

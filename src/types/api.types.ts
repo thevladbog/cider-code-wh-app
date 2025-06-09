@@ -1,5 +1,3 @@
-import { Order } from '../models/orders';
-
 // Расширенная модель заказа с полями из API
 export interface ApiOrder {
   id: string;

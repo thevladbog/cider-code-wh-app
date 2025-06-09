@@ -27,7 +27,10 @@ interface ElectronAPI {
     error?: string;
     status?: number;
   }>;
-  updateOrderStatus: (id: string, status: string) => Promise<{
+  updateOrderStatus: (
+    id: string,
+    status: string
+  ) => Promise<{
     success: boolean;
     data?: unknown;
     error?: string;

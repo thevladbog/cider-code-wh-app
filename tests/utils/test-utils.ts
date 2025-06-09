@@ -1,6 +1,7 @@
 import { afterEach } from 'vitest';
 
 // Функция для очистки хранилища Zustand после тестов
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function cleanupZustandStore(store: any) {
   afterEach(() => {
     store.setState({

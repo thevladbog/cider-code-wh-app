@@ -1,25 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStore } from '../../src/store';
-import * as API from '../../src/services/api';
 import { Order } from '../../src/models/orders';
 
-// Мокаем API сервис
-vi.mock('../../src/services/api', () => ({
+// Mock window.electronAPI
+const mockElectronAPI = {
   fetchOrders: vi.fn(),
-  archiveOrder: vi.fn()
-}));
+  getTlsStatus: vi.fn(),
+  archiveOrder: vi.fn(),
+  updateOrderStatus: vi.fn()
+};
 
 describe('Store', () => {
   beforeEach(() => {
     // Сбрасываем моки и состояние хранилища перед каждым тестом
     vi.clearAllMocks();
+    
+    // Setup window.electronAPI mock
+    vi.stubGlobal('window', {
+      electronAPI: mockElectronAPI
+    });
+    
     useStore.setState({
       orders: [],
       archivedOrders: [],
       selectedOrder: null,
       showArchive: false,
       isLoading: false,
-      error: null
+      error: null,
+      tlsStatus: null,
+      tlsStatusLoading: false,
+      tlsStatusError: null
     });
   });
 
@@ -30,25 +40,27 @@ describe('Store', () => {
       ];
       const mockArchivedOrders = [
         { id: '2', orderNumber: '12346', status: 'ARCHIVE', deliveryDate: '2023-01-02', consignee: 'Test Company 2', address: 'Test Address 2', template: 'template' }
-      ];
-
-      // Настраиваем моки API
-      // @ts-expect-errors  - игнорируем несоответствие типов для мока
-      API.fetchOrders.mockImplementation((status) => {
+      ];      // Настраиваем моки electronAPI
+      mockElectronAPI.fetchOrders.mockImplementation((status) => {
         if (status === 'NEW') {
-          return Promise.resolve(mockActiveOrders);
+          return Promise.resolve({ success: true, data: mockActiveOrders });
         } else {
-          return Promise.resolve(mockArchivedOrders);
+          return Promise.resolve({ success: true, data: mockArchivedOrders });
         }
+      });
+
+      mockElectronAPI.getTlsStatus.mockResolvedValue({
+        isConnected: true,
+        lastChecked: new Date().toISOString()
       });
 
       // Вызываем метод из store
       const store = useStore.getState();
       await store.fetchOrders();
 
-      // Проверяем, что API был вызван
-      expect(API.fetchOrders).toHaveBeenCalledWith('NEW');
-      expect(API.fetchOrders).toHaveBeenCalledWith('ARCHIVE');
+      // Проверяем, что electronAPI был вызван
+      expect(mockElectronAPI.fetchOrders).toHaveBeenCalledWith('NEW');
+      expect(mockElectronAPI.fetchOrders).toHaveBeenCalledWith('ARCHIVE');
 
       // Проверяем обновление состояния
       const updatedStore = useStore.getState();
@@ -56,24 +68,20 @@ describe('Store', () => {
       expect(updatedStore.archivedOrders).toEqual(mockArchivedOrders);
       expect(updatedStore.isLoading).toBe(false);
       expect(updatedStore.error).toBeNull();
-    });
-
-    it('should handle API errors', async () => {
-      const errorMessage = 'Ошибка при загрузке заказов';
+    });    it('should handle API errors', async () => {
+      const errorMessage = 'Failed to fetch active orders';
       
-      // Настраиваем мок API с ошибкой
-      // @ts-expect-errors - игнорируем несоответствие типов для мока
-      API.fetchOrders.mockImplementation(() => {
-        return Promise.reject(new Error(errorMessage));
+      // Настраиваем мок electronAPI с ошибкой
+      mockElectronAPI.fetchOrders.mockResolvedValue({
+        success: false,
+        error: errorMessage
       });
 
       // Вызываем метод из store
       const store = useStore.getState();
-      const result = await store.fetchOrders();
+      await store.fetchOrders();
 
       // Проверяем обработку ошибки
-      expect(result).toEqual([]);
-      
       const updatedStore = useStore.getState();
       expect(updatedStore.isLoading).toBe(false);
       expect(updatedStore.error).toBe(errorMessage);
@@ -96,18 +104,15 @@ describe('Store', () => {
       useStore.setState({
         orders: [mockOrder],
         archivedOrders: []
-      });
-
-      // Настраиваем мок API
-      // @ts-expect-errors - игнорируем несоответствие типов для мока
-      API.archiveOrder.mockResolvedValue(true);
+      });      // Настраиваем мок electronAPI
+      mockElectronAPI.archiveOrder.mockResolvedValue({ success: true });
 
       // Вызываем метод из store
       const store = useStore.getState();
       await store.archiveOrder('1');
 
-      // Проверяем, что API был вызван
-      expect(API.archiveOrder).toHaveBeenCalledWith('1');
+      // Проверяем, что electronAPI был вызван
+      expect(mockElectronAPI.archiveOrder).toHaveBeenCalledWith('1');
 
       // Проверяем обновление состояния
       const updatedStore = useStore.getState();
@@ -115,15 +120,13 @@ describe('Store', () => {
       expect(updatedStore.archivedOrders).toHaveLength(1);
       expect(updatedStore.archivedOrders[0].id).toBe('1');
       expect(updatedStore.archivedOrders[0].status).toBe('ARCHIVE');
-    });
-
-    it('should handle API errors during archiving', async () => {
-      const errorMessage = 'Ошибка при архивации заказа';
+    });    it('should handle API errors during archiving', async () => {
+      const errorMessage = 'Failed to archive order';
       
-      // Настраиваем мок API с ошибкой
-      // @ts-expect-errors - игнорируем несоответствие типов для мока
-      API.archiveOrder.mockImplementation(() => {
-        return Promise.reject(new Error(errorMessage));
+      // Настраиваем мок electronAPI с ошибкой
+      mockElectronAPI.archiveOrder.mockResolvedValue({
+        success: false,
+        error: errorMessage
       });
 
       // Вызываем метод из store

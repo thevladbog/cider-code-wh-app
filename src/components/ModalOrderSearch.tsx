@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useStore } from '../store';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useWindowSize } from '../hooks/useWindowSize';
 import { Order } from '../models/orders';

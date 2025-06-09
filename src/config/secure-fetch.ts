@@ -8,7 +8,7 @@ import { recordSuccessfulConnection, recordFailedConnection } from './tls-status
  */
 export async function secureFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const isHttps = url.startsWith('https:');
-  
+
   // Создаем опции запроса с HTTPS агентом для TLS
   const fetchOptions: RequestInit & { agent?: https.Agent } = {
     ...options,
@@ -22,19 +22,19 @@ export async function secureFetch(url: string, options: RequestInit = {}): Promi
   // Примечание: в Node.js версии меньше 18 нужно использовать node-fetch
   try {
     const response = await fetch(url, fetchOptions);
-    
+
     // Если запрос успешен, записываем успешное соединение
     if (isHttps) {
       recordSuccessfulConnection();
     }
-    
+
     return response;
   } catch (error) {
     // Если запрос неуспешен, записываем неудачное соединение
     if (isHttps) {
       recordFailedConnection(error instanceof Error ? error.message : 'Неизвестная ошибка');
     }
-    
+
     throw error;
   }
 }
@@ -44,7 +44,7 @@ export async function secureFetch(url: string, options: RequestInit = {}): Promi
  */
 export function getSecureRequestConfig() {
   const env = getEnvironment();
-  
+
   return {
     baseUrl: env.apiBaseUrl,
     httpsAgent: createHttpsAgent(),

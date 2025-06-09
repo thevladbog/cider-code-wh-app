@@ -12,23 +12,23 @@ export default function CertificateManager() {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<boolean>(false);
   const [uploadFiles, setUploadFiles] = useState<{
-    cert: File | null,
-    key: File | null,
-    ca: File | null
+    cert: File | null;
+    key: File | null;
+    ca: File | null;
   }>({
     cert: null,
     key: null,
-    ca: null
+    ca: null,
   });
   // Получение информации о текущем сертификате
   const fetchCertificateInfo = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Вызываем IPC метод для получения информации о сертификате
       const info = await window.electronAPI?.getCertificateInfo();
-      
+
       setCertInfo(info);
     } catch (err) {
       console.error('Ошибка получения информации о сертификате:', err);
@@ -42,9 +42,9 @@ export default function CertificateManager() {
     try {
       setUpdating(true);
       setError(null);
-        // Вызываем IPC метод для обновления сертификата
+      // Вызываем IPC метод для обновления сертификата
       const result = await window.electronAPI?.checkAndUpdateCertificates(true);
-      
+
       if (!result?.valid) {
         setError('Не удалось обновить сертификат или новый сертификат недействителен');
       } else {
@@ -59,11 +59,14 @@ export default function CertificateManager() {
   };
 
   // Загрузка файлов сертификатов
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'cert' | 'key' | 'ca') => {
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    type: 'cert' | 'key' | 'ca'
+  ) => {
     if (event.target.files && event.target.files[0]) {
       setUploadFiles(prev => ({
         ...prev,
-        [type]: event.target.files?.[0] || null
+        [type]: event.target.files?.[0] || null,
       }));
     }
   };
@@ -75,30 +78,30 @@ export default function CertificateManager() {
         setError('Необходимо выбрать файлы сертификата и ключа');
         return;
       }
-      
+
       setUpdating(true);
       setError(null);
-      
+
       // Читаем содержимое файлов
       const certData = await readFileAsText(uploadFiles.cert);
       const keyData = await readFileAsText(uploadFiles.key);
       const caData = uploadFiles.ca ? await readFileAsText(uploadFiles.ca) : undefined;
-        // Вызываем IPC метод для загрузки сертификатов
+      // Вызываем IPC метод для загрузки сертификатов
       const result = await window.electronAPI?.uploadCertificates({
         certData,
         keyData,
-        caData
+        caData,
       });
-        if (!result?.success) {
+      if (!result?.success) {
         setError(result?.error || 'Не удалось загрузить сертификаты');
       } else {
         setCertInfo(result.certInfo || null);
-        
+
         // Очищаем выбранные файлы
         setUploadFiles({
           cert: null,
           key: null,
-          ca: null
+          ca: null,
         });
       }
     } catch (err) {
@@ -122,16 +125,16 @@ export default function CertificateManager() {
   // Загружаем информацию о сертификате при монтировании компонента
   useEffect(() => {
     fetchCertificateInfo();
-    
+
     // Обновляем информацию каждую минуту
     const intervalId = setInterval(fetchCertificateInfo, 60000);
-    
+
     return () => clearInterval(intervalId);
   }, []);
   // Рендеринг информации о сертификате
   const renderCertificateInfo = () => {
     if (!certInfo) return null;
-    
+
     return (
       <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4">
         <div className="flex items-center mb-2">
@@ -144,11 +147,15 @@ export default function CertificateManager() {
             Статус сертификата: {certInfo.valid ? 'Действителен' : 'Недействителен'}
           </h3>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <p><span className="font-semibold">Домен:</span> {certInfo.domain || 'Н/Д'}</p>
-            <p><span className="font-semibold">Издатель:</span> {certInfo.issuer || 'Н/Д'}</p>
+            <p>
+              <span className="font-semibold">Домен:</span> {certInfo.domain || 'Н/Д'}
+            </p>
+            <p>
+              <span className="font-semibold">Издатель:</span> {certInfo.issuer || 'Н/Д'}
+            </p>
           </div>
           <div>
             <p>
@@ -168,17 +175,17 @@ export default function CertificateManager() {
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">Управление TLS-сертификатами</h2>
-      
+
       {loading && <p className="text-gray-500">Загрузка информации о сертификате...</p>}
-      
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <p>{error}</p>
         </div>
       )}
-      
+
       {renderCertificateInfo()}
-      
+
       <div className="mb-6">
         <button
           onClick={handleUpdateCertificate}
@@ -192,41 +199,43 @@ export default function CertificateManager() {
           Попытка автоматически обновить сертификаты из настроенного источника.
         </p>
       </div>
-      
+
       <div className="border-t pt-4">
         <h3 className="text-xl font-semibold mb-3">Загрузка сертификатов вручную</h3>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Сертификат (cert.pem)</label>
             <input
               type="file"
-              onChange={(e) => handleFileChange(e, 'cert')}
+              onChange={e => handleFileChange(e, 'cert')}
               disabled={updating}
               className="w-full p-2 border rounded"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-1">Закрытый ключ (key.pem)</label>
             <input
               type="file"
-              onChange={(e) => handleFileChange(e, 'key')}
+              onChange={e => handleFileChange(e, 'key')}
               disabled={updating}
               className="w-full p-2 border rounded"
             />
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium mb-1">CA-сертификат (ca.pem, необязательно)</label>
+            <label className="block text-sm font-medium mb-1">
+              CA-сертификат (ca.pem, необязательно)
+            </label>
             <input
               type="file"
-              onChange={(e) => handleFileChange(e, 'ca')}
+              onChange={e => handleFileChange(e, 'ca')}
               disabled={updating}
               className="w-full p-2 border rounded"
             />
           </div>
-          
+
           <button
             onClick={handleUploadCertificates}
             disabled={!uploadFiles.cert || !uploadFiles.key || updating}

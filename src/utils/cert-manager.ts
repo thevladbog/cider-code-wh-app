@@ -31,24 +31,24 @@ export function validateCertificate(certPath: string): CertificateInfo {
         valid: false,
         expiration: null,
         issuer: null,
-        domain: null
+        domain: null,
       };
-    }    // Загружаем сертификат
+    } // Загружаем сертификат
     const certData = fs.readFileSync(certPath, 'utf-8');
-    
+
     // Используем библиотеку node-forge для разбора сертификата
     const certObj = forge.pki.certificateFromPem(certData);
-    
+
     // Получаем информацию о сертификате
     const subject = certObj.subject.getField('CN')?.value;
     const issuer = certObj.issuer.getField('CN')?.value || certObj.issuer.getField('O')?.value;
     const notBefore = new Date(certObj.validity.notBefore);
     const notAfter = new Date(certObj.validity.notAfter);
     const now = new Date();
-    
+
     // Проверяем срок действия
     const isExpired = now > notAfter;
-    const isNotYetValid = now < notBefore;    // Получаем альтернативные имена
+    const isNotYetValid = now < notBefore; // Получаем альтернативные имена
     let subjectAltNames: string[] | null = null;
     try {
       const altNamesExt = certObj.getExtension('subjectAltName');
@@ -59,7 +59,7 @@ export function validateCertificate(certPath: string): CertificateInfo {
     } catch (e) {
       console.warn('[CERT] Error parsing Subject Alternative Names:', e);
     }
-    
+
     // Возвращаем информацию о сертификате
     return {
       valid: !isExpired && !isNotYetValid,
@@ -69,7 +69,7 @@ export function validateCertificate(certPath: string): CertificateInfo {
       notBefore: notBefore,
       notAfter: notAfter,
       serialNumber: certObj.serialNumber || null,
-      subjectAltName: subjectAltNames
+      subjectAltName: subjectAltNames,
     };
   } catch (error) {
     console.error('[CERT] Error validating certificate:', error);
@@ -77,7 +77,7 @@ export function validateCertificate(certPath: string): CertificateInfo {
       valid: false,
       expiration: null,
       issuer: null,
-      domain: null
+      domain: null,
     };
   }
 }
@@ -90,11 +90,11 @@ export function isCertificateExpiringSoon(certInfo: CertificateInfo, daysThresho
   if (!certInfo.valid || !certInfo.expiration) {
     return false;
   }
-  
+
   const now = new Date();
   const expiration = new Date(certInfo.expiration);
   const diffDays = Math.floor((expiration.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   return diffDays <= daysThreshold;
 }
 
@@ -107,42 +107,37 @@ export function isCertificateExpiringSoon(certInfo: CertificateInfo, daysThresho
 export async function updateCertificates(sourcePath: string, reloadAgent = true): Promise<boolean> {
   try {
     const { certsDir, certFile, keyFile, caFile } = getCertsPaths();
-    
+
     // Проверяем наличие директории для сертификатов и создаем, если нет
     if (!fs.existsSync(certsDir)) {
       fs.mkdirSync(certsDir, { recursive: true });
     }
-    
+
     // Проверяем наличие исходных сертификатов
     const sourceCertFile = path.join(sourcePath, 'cert.pem');
     const sourceKeyFile = path.join(sourcePath, 'key.pem');
     const sourceCaFile = path.join(sourcePath, 'ca.pem');
-    
+
     if (!fs.existsSync(sourceCertFile) || !fs.existsSync(sourceKeyFile)) {
       console.error('[CERT] Source certificate files not found.');
       return false;
     }
-    
+
     // Копируем сертификаты
     fs.copyFileSync(sourceCertFile, certFile);
     fs.copyFileSync(sourceKeyFile, keyFile);
-    
+
     // Копируем CA-сертификат, если он существует
     if (fs.existsSync(sourceCaFile)) {
       fs.copyFileSync(sourceCaFile, caFile);
     }
-    
+
     // Проверяем и обновляем информацию о сертификате
     const certInfo = validateCertificate(certFile);
-    updateCertificateInfo(
-      certInfo.valid,
-      certInfo.expiration,
-      certInfo.issuer,
-      certInfo.domain
-    );
-    
+    updateCertificateInfo(certInfo.valid, certInfo.expiration, certInfo.issuer, certInfo.domain);
+
     console.log('[CERT] Certificates successfully updated.');
-      // Перезагружаем HTTPS агент, если требуется
+    // Перезагружаем HTTPS агент, если требуется
     if (reloadAgent) {
       try {
         reloadHttpsAgent();
@@ -152,7 +147,7 @@ export async function updateCertificates(sourcePath: string, reloadAgent = true)
         // Продолжаем выполнение, так как сертификаты были обновлены успешно
       }
     }
-    
+
     return true;
   } catch (error) {
     console.error('[CERT] Error updating certificates:', error);
@@ -165,25 +160,23 @@ export async function updateCertificates(sourcePath: string, reloadAgent = true)
  * @param autoUpdate Автоматически обновлять сертификаты, если они скоро истекают
  * @param updateSource Путь к директории с новыми сертификатами
  */
-export async function checkAndUpdateCertificates(autoUpdate = false, updateSource?: string): Promise<CertificateInfo> {
+export async function checkAndUpdateCertificates(
+  autoUpdate = false,
+  updateSource?: string
+): Promise<CertificateInfo> {
   const { certFile } = getCertsPaths();
-  
+
   // Проверяем текущий сертификат
   const certInfo = validateCertificate(certFile);
-  
+
   // Обновляем информацию о сертификате в статусе TLS
-  updateCertificateInfo(
-    certInfo.valid,
-    certInfo.expiration,
-    certInfo.issuer,
-    certInfo.domain
-  );
-  
+  updateCertificateInfo(certInfo.valid, certInfo.expiration, certInfo.issuer, certInfo.domain);
+
   // Если сертификат скоро истекает и указан источник для обновления
   if (autoUpdate && updateSource && isCertificateExpiringSoon(certInfo)) {
     console.log('[CERT] Certificate is expiring soon, attempting auto-update...');
     const updated = await updateCertificates(updateSource);
-    
+
     if (updated) {
       // Повторная проверка после обновления
       const updatedCertInfo = validateCertificate(certFile);
@@ -196,7 +189,7 @@ export async function checkAndUpdateCertificates(autoUpdate = false, updateSourc
       return updatedCertInfo;
     }
   }
-  
+
   return certInfo;
 }
 
@@ -207,13 +200,13 @@ export async function checkAndUpdateCertificates(autoUpdate = false, updateSourc
  * @param updateSource Путь к директории с новыми сертификатами
  */
 export function startCertificateMonitoring(
-  intervalMs: number = 24 * 60 * 60 * 1000, 
-  autoUpdate = false, 
+  intervalMs: number = 24 * 60 * 60 * 1000,
+  autoUpdate = false,
   updateSource?: string
 ): NodeJS.Timeout {
   // Выполняем первую проверку
   checkAndUpdateCertificates(autoUpdate, updateSource);
-  
+
   // Настраиваем периодическую проверку
   return setInterval(() => {
     checkAndUpdateCertificates(autoUpdate, updateSource);
@@ -225,7 +218,7 @@ export function startCertificateMonitoring(
  */
 export function getCertificateSource(): string {
   const provider = process.env.SECRET_PROVIDER || 'self-signed';
-  
+
   switch (provider) {
     case 'azure':
       return 'Azure Key Vault';
@@ -247,11 +240,11 @@ export function getCertificateSource(): string {
  */
 export function isProductionReadyCertificate(certInfo: CertificateInfo): boolean {
   if (!certInfo.valid) return false;
-  
+
   // Проверяем, что это не самоподписанный сертификат
   const isSelfSigned = certInfo.issuer === certInfo.domain;
   if (isSelfSigned) return false;
-  
+
   // Проверяем известные продакшн CA
   const productionCAs = [
     "Let's Encrypt",
@@ -260,10 +253,8 @@ export function isProductionReadyCertificate(certInfo: CertificateInfo): boolean
     'Comodo',
     'GeoTrust',
     'Symantec',
-    'Thawte'
+    'Thawte',
   ];
-  
-  return productionCAs.some(ca => 
-    certInfo.issuer?.toLowerCase().includes(ca.toLowerCase())
-  );
+
+  return productionCAs.some(ca => certInfo.issuer?.toLowerCase().includes(ca.toLowerCase()));
 }

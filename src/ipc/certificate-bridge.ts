@@ -25,7 +25,7 @@ export function registerCertificateAPI() {
 
       startCertificateMonitoring: async (): Promise<void> => {
         return await ipcRenderer.invoke('certificate:start-monitoring');
-      }
+      },
     });
   } else {
     // Fallback: создаем новый API если electronAPI еще не существует
@@ -36,13 +36,14 @@ export function registerCertificateAPI() {
 
       checkAndUpdateCertificates: async (): Promise<boolean> => {
         return await ipcRenderer.invoke('certificate:check-and-update');
-      },      uploadCertificate: async (certificatePath: string, keyPath: string): Promise<boolean> => {
+      },
+      uploadCertificate: async (certificatePath: string, keyPath: string): Promise<boolean> => {
         return await ipcRenderer.invoke('certificate:upload', certificatePath, keyPath);
       },
 
       startCertificateMonitoring: async (): Promise<void> => {
         return await ipcRenderer.invoke('certificate:start-monitoring');
-      }
+      },
     });
   }
 }

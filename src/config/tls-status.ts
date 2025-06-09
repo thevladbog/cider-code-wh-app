@@ -51,7 +51,7 @@ export function recordSuccessfulConnection(): void {
   tlsStatus.lastConnection = new Date();
   tlsStatus.connections.total++;
   tlsStatus.connections.successful++;
-  
+
   // Сохраняем состояние для аналитики
   saveTlsStatusToFile();
 }
@@ -64,7 +64,7 @@ export function recordFailedConnection(error: string): void {
   tlsStatus.lastError = error;
   tlsStatus.connections.total++;
   tlsStatus.connections.failed++;
-  
+
   // Сохраняем состояние для аналитики
   saveTlsStatusToFile();
 }
@@ -84,7 +84,7 @@ export function updateCertificateInfo(
     issuer,
     domain,
   };
-  
+
   // Сохраняем состояние для аналитики
   saveTlsStatusToFile();
 }
@@ -95,14 +95,14 @@ export function updateCertificateInfo(
 function saveTlsStatusToFile(): void {
   try {
     const env = getEnvironment();
-    
+
     // В режиме разработки сохраняем в текущем каталоге
     if (env.mode === 'development') {
       const filePath = path.join(process.cwd(), 'tls-status.json');
       fs.writeFileSync(filePath, JSON.stringify(tlsStatus, null, 2));
       return;
     }
-    
+
     // В режиме продакшена сохраняем в каталоге данных приложения
     const filePath = path.join(app.getPath('userData'), 'tls-status.json');
     fs.writeFileSync(filePath, JSON.stringify(tlsStatus, null, 2));

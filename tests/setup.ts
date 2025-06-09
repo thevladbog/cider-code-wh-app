@@ -1,8 +1,37 @@
 // Настройки и типы для тестов
-import { afterEach, vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
 
 // Подключаем кастомные jest-dom матчеры для Vitest
 import './utils/jest-dom';
+
+// Configure React 18 for better test compatibility
+vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+
+// Fix JSDOM instanceof issues
+// JSDOM в test environment не всегда правильно имплементирует instanceof для DOM элементов
+// Это исправляет ошибку "Right-hand side of 'instanceof' is not an object"
+Object.defineProperty(window, 'HTMLElement', {
+  value: window.HTMLElement,
+  writable: true,
+  configurable: true
+});
+
+Object.defineProperty(window, 'Element', {
+  value: window.Element,
+  writable: true,
+  configurable: true
+});
+
+Object.defineProperty(window, 'Node', {
+  value: window.Node,
+  writable: true,
+  configurable: true
+});
+
+// Убеждаемся что window объекты правильно настроены
+if (typeof window !== 'undefined' && window.HTMLElement) {
+  window.HTMLElement.prototype.constructor = window.HTMLElement;
+}
 
 // Замените этот импорт, если установите testing-library/jest-dom:
 // import '@testing-library/jest-dom/extend-expect';

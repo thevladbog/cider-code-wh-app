@@ -5,20 +5,22 @@ import fs from 'node:fs';
 // Handle squirrel events properly - only exit during actual installation events
 const handleSquirrelEvents = () => {
   if (process.platform !== 'win32') return false;
-  
+
   const cmd = process.argv[1];
   if (!cmd) return false;
-  
+
   // Only handle actual Squirrel installer events, not normal app launch
-  if (cmd.includes('--squirrel-install') || 
-      cmd.includes('--squirrel-updated') || 
-      cmd.includes('--squirrel-uninstall') || 
-      cmd.includes('--squirrel-obsolete')) {
+  if (
+    cmd.includes('--squirrel-install') ||
+    cmd.includes('--squirrel-updated') ||
+    cmd.includes('--squirrel-uninstall') ||
+    cmd.includes('--squirrel-obsolete')
+  ) {
     console.log('Squirrel installer event detected:', cmd);
     app.quit();
     return true;
   }
-  
+
   return false;
 };
 
@@ -161,12 +163,16 @@ let mainWindow: BrowserWindow | null = null;
 // Функция для создания основного окна приложения
 const createWindow = (): void => {
   console.log('Creating main window...');
-  
   // Create the browser window.
   mainWindow = new BrowserWindow({
     height: 800,
     width: 1200,
+    minHeight: 600,
+    minWidth: 900,
     show: false, // Не показываем окно сразу
+    frame: false, // Убираем нативную рамку для полного контроля
+    titleBarStyle: 'hidden', // Скрываем заголовок окна
+    backgroundColor: '#ffffff', // Фоновый цвет для избежания белого экрана
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -181,7 +187,7 @@ const createWindow = (): void => {
     console.log('Window ready to show');
     if (mainWindow) {
       mainWindow.show();
-      
+
       // Фокусируем окно на Windows
       if (process.platform === 'win32') {
         mainWindow.focus();
@@ -192,9 +198,51 @@ const createWindow = (): void => {
   // Обработка ошибок загрузки
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load page:', errorCode, errorDescription);
-  });  // Load the app content - dev server in development, static files in production
+  });
+
+  // Дополнительные обработчики событий для окна
+  mainWindow.on('enter-full-screen', () => {
+    console.log('Entered fullscreen mode');
+  });
+
+  mainWindow.on('leave-full-screen', () => {
+    console.log('Left fullscreen mode');
+  });
+
+  mainWindow.on('maximize', () => {
+    console.log('Window maximized');
+  });
+
+  mainWindow.on('unmaximize', () => {
+    console.log('Window unmaximized');
+  });
+
+  mainWindow.on('minimize', () => {
+    console.log('Window minimized');
+  });
+
+  mainWindow.on('restore', () => {
+    console.log('Window restored');
+  });
+  // Предотвращаем закрытие окна через системные команды в режиме киоска
+  // НО разрешаем закрытие через наш API
+  let forceClose = false;
+
+  mainWindow.on('close', event => {
+    if (mainWindow?.isKiosk() && !forceClose) {
+      console.log('Close prevented in kiosk mode - use app:quit to force close');
+      event.preventDefault();
+      return false;
+    }
+  });
+  // Сохраняем ссылку на функцию принудительного закрытия
+  (mainWindow as BrowserWindow & { forceClose?: () => void }).forceClose = () => {
+    forceClose = true;
+  };
+
+  // Load the app content - dev server in development, static files in production
   const isDevelopment = process.env.NODE_ENV === 'development';
-  
+
   if (isDevelopment && typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined') {
     console.log('Loading dev server URL:', MAIN_WINDOW_VITE_DEV_SERVER_URL);
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -204,9 +252,9 @@ const createWindow = (): void => {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
       path.join(__dirname, '../renderer/index.html'),
       path.join(__dirname, '../index.html'),
-      path.join(__dirname, '.vite/renderer/index.html')
+      path.join(__dirname, '.vite/renderer/index.html'),
     ];
-    
+
     let indexPath: string | null = null;
     for (const possiblePath of possiblePaths) {
       console.log('Checking path:', possiblePath);
@@ -216,13 +264,19 @@ const createWindow = (): void => {
         break;
       }
     }
-    
+
     if (indexPath) {
       mainWindow.loadFile(indexPath);
     } else {
       console.error('No valid index.html found in any of the expected paths');
       // Last resort - try to load from renderer directory directly
-      const fallbackPath = path.join(process.resourcesPath, 'app', '.vite', 'renderer', 'index.html');
+      const fallbackPath = path.join(
+        process.resourcesPath,
+        'app',
+        '.vite',
+        'renderer',
+        'index.html'
+      );
       console.log('Trying fallback path:', fallbackPath);
       if (fs.existsSync(fallbackPath)) {
         mainWindow.loadFile(fallbackPath);
@@ -249,7 +303,7 @@ const createWindow = (): void => {
 app.whenReady().then(() => {
   console.log('Electron app is ready');
   createWindow();
-  
+
   // На macOS нужно создать окно заново при активации
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -316,7 +370,8 @@ async function makeApiRequest(options: ApiRequestOptions) {
     }
 
     const data = await response.json();
-    return { success: true, data };  } catch (error) {
+    return { success: true, data };
+  } catch (error) {
     console.error('[API] Error:', error);
     return {
       success: false,
@@ -387,7 +442,7 @@ ipcMain.handle('print-labels', async (_event, options: PrintLabelsOptions) => {
     }
 
     console.log(`[IPC] Печать на принтере: ${printerName}`);
-    
+
     // Обрабатываем этикетки в главном процессе
     const result = await printLabelsMain(options.labels, printerName);
     console.log(`[IPC] Результат печати: ${result}`);
@@ -402,24 +457,26 @@ ipcMain.handle('print-labels', async (_event, options: PrintLabelsOptions) => {
 async function printLabelsMain(labels: string[], printerName: string): Promise<boolean> {
   try {
     console.log(`[PRINT-MAIN] Начало печати ${labels.length} этикеток на принтере: ${printerName}`);
-    
+
     // Находим конфигурацию принтера
     const printerConfig = printersList.find(p => p.name === printerName);
     if (!printerConfig) {
       console.error(`[PRINT-MAIN] Принтер "${printerName}" не найден в конфигурации`);
       return false;
     }
-    
+
     // Объединяем все этикетки в один файл ZPL
     const allLabelsContent = labels.join('\n');
     console.log(`[PRINT-MAIN] Подготовлен ZPL контент, размер: ${allLabelsContent.length} байт`);
-    
+
     // Для ZPL принтеров используем прямую TCP отправку
     if (printerConfig.connectionType === 'network' && printerConfig.ip && printerConfig.port) {
-      console.log(`[PRINT-MAIN] Отправка ZPL данных на сетевой принтер ${printerConfig.ip}:${printerConfig.port}`);
+      console.log(
+        `[PRINT-MAIN] Отправка ZPL данных на сетевой принтер ${printerConfig.ip}:${printerConfig.port}`
+      );
       return await sendZplToNetworkPrinter(printerConfig.ip, printerConfig.port, allLabelsContent);
     }
-    
+
     console.error(`[PRINT-MAIN] Неподдерживаемый тип принтера: ${printerConfig.connectionType}`);
     return false;
   } catch (error) {
@@ -429,22 +486,26 @@ async function printLabelsMain(labels: string[], printerName: string): Promise<b
 }
 
 // Функция для отправки ZPL данных на сетевой принтер
-async function sendZplToNetworkPrinter(ip: string, port: number, zplData: string): Promise<boolean> {
-  return new Promise((resolve) => {
+async function sendZplToNetworkPrinter(
+  ip: string,
+  port: number,
+  zplData: string
+): Promise<boolean> {
+  return new Promise(resolve => {
     try {
       console.log(`[PRINT-MAIN] Подключение к ZPL принтеру ${ip}:${port}`);
-      
+
       const client = new net.Socket();
       let connected = false;
-      
+
       // Обработчик успешного подключения
       client.connect(port, ip, () => {
         connected = true;
         console.log(`[PRINT-MAIN] Подключился к принтеру ${ip}:${port}`);
         console.log(`[PRINT-MAIN] Отправка ZPL данных (${zplData.length} байт)`);
-        
+
         // Отправляем ZPL данные
-        client.write(zplData, 'utf8', (error) => {
+        client.write(zplData, 'utf8', error => {
           if (error) {
             console.error('[PRINT-MAIN] Ошибка отправки ZPL данных:', error);
             client.destroy();
@@ -455,7 +516,7 @@ async function sendZplToNetworkPrinter(ip: string, port: number, zplData: string
           }
         });
       });
-      
+
       // Обработчик закрытия соединения
       client.on('close', () => {
         console.log(`[PRINT-MAIN] Соединение с принтером ${ip}:${port} закрыто`);
@@ -463,14 +524,14 @@ async function sendZplToNetworkPrinter(ip: string, port: number, zplData: string
           resolve(true);
         }
       });
-      
+
       // Обработчик ошибок
-      client.on('error', (err) => {
+      client.on('error', err => {
         console.error(`[PRINT-MAIN] Ошибка TCP соединения с ${ip}:${port}:`, err.message);
         client.destroy();
         resolve(false);
       });
-      
+
       // Таймаут на подключение (10 секунд)
       setTimeout(() => {
         if (!connected) {
@@ -479,7 +540,6 @@ async function sendZplToNetworkPrinter(ip: string, port: number, zplData: string
           resolve(false);
         }
       }, 10000);
-      
     } catch (error) {
       console.error('[PRINT-MAIN] Ошибка при отправке ZPL:', error);
       resolve(false);
@@ -494,22 +554,22 @@ ipcMain.handle('save-printer-config', async (_event, config: PrinterConfig[]) =>
     const success = savePrinterConfig(config);
     if (success) {
       printersList = config; // Обновляем глобальную переменную
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: 'Конфигурация принтеров сохранена успешно',
-        loadedConfig: config 
+        loadedConfig: config,
       };
     } else {
-      return { 
-        success: false, 
-        message: 'Не удалось сохранить конфигурацию принтеров' 
+      return {
+        success: false,
+        message: 'Не удалось сохранить конфигурацию принтеров',
       };
     }
   } catch (error) {
     console.error('[IPC] Ошибка сохранения конфигурации принтеров:', error);
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Неизвестная ошибка при сохранении' 
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Неизвестная ошибка при сохранении',
     };
   }
 });
@@ -520,21 +580,30 @@ ipcMain.handle('test-printer-connection', async (_event, printerConfig: PrinterC
   try {
     if (printerConfig.connectionType === 'network' && printerConfig.ip && printerConfig.port) {
       const result = await testNetworkPrinter(printerConfig.ip, printerConfig.port);
-      return { 
-        success: result.success, 
-        message: result.success ? 'Подключение успешно' : (result.error || 'Ошибка подключения') 
+      return {
+        success: result.success,
+        message: result.success ? 'Подключение успешно' : result.error || 'Ошибка подключения',
       };
     }
-    return { success: false, message: 'Неподдерживаемый тип подключения или отсутствуют параметры' };
+    return {
+      success: false,
+      message: 'Неподдерживаемый тип подключения или отсутствуют параметры',
+    };
   } catch (error) {
     console.error('[IPC] Ошибка тестирования принтера:', error);
-    return { success: false, message: error instanceof Error ? error.message : 'Неизвестная ошибка при тестировании' };
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Неизвестная ошибка при тестировании',
+    };
   }
 });
 
 // Функция для тестирования сетевого принтера
-function testNetworkPrinter(ip: string, port: number): Promise<{ success: boolean; error?: string }> {
-  return new Promise((resolve) => {
+function testNetworkPrinter(
+  ip: string,
+  port: number
+): Promise<{ success: boolean; error?: string }> {
+  return new Promise(resolve => {
     const socket = new net.Socket();
     const timeout = 5000; // 5 секунд
 
@@ -549,7 +618,7 @@ function testNetworkPrinter(ip: string, port: number): Promise<{ success: boolea
       resolve({ success: true });
     });
 
-    socket.on('error', (error) => {
+    socket.on('error', error => {
       clearTimeout(timer);
       socket.destroy();
       resolve({ success: false, error: error.message });
@@ -566,14 +635,14 @@ ipcMain.handle('get-usb-devices', async () => {
     return {
       success: true,
       devices: [],
-      message: 'USB устройства не поддерживаются в текущей версии'
+      message: 'USB устройства не поддерживаются в текущей версии',
     };
   } catch (error) {
     console.error('[IPC] Ошибка получения USB устройств:', error);
     return {
       success: false,
       devices: [],
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 });
@@ -616,7 +685,7 @@ ipcMain.handle('print-raw-to-printer', async (_event, printerName: string, rawDa
 
 // Функция для отправки сырых данных на сетевой принтер
 function sendRawDataToNetworkPrinter(ip: string, port: number, data: string): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const socket = new net.Socket();
     const timeout = 10000; // 10 секунд
 
@@ -626,7 +695,7 @@ function sendRawDataToNetworkPrinter(ip: string, port: number, data: string): Pr
     }, timeout);
 
     socket.connect(port, ip, () => {
-      socket.write(data, 'utf8', (error) => {
+      socket.write(data, 'utf8', error => {
         clearTimeout(timer);
         if (error) {
           console.error('[PRINT] Ошибка отправки данных:', error);
@@ -639,7 +708,7 @@ function sendRawDataToNetworkPrinter(ip: string, port: number, data: string): Pr
       });
     });
 
-    socket.on('error', (error) => {
+    socket.on('error', error => {
       clearTimeout(timer);
       console.error('[PRINT] Ошибка подключения к принтеру:', error);
       socket.destroy();
@@ -667,13 +736,13 @@ ipcMain.handle('test-serial-port', async () => {
     // Заглушка для тестирования последовательного порта
     return {
       success: false,
-      message: 'Последовательные порты не поддерживаются в текущей версии'
+      message: 'Последовательные порты не поддерживаются в текущей версии',
     };
   } catch (error) {
     console.error('[IPC] Ошибка тестирования последовательного порта:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 });
@@ -687,4 +756,76 @@ ipcMain.handle('get-enhanced-serial-port-info', async () => {
     console.error('[IPC] Ошибка получения расширенной информации о портах:', error);
     return [];
   }
+});
+
+// IPC обработчики для управления окном
+ipcMain.handle('window:toggle-fullscreen', async () => {
+  if (mainWindow) {
+    const isFullScreen = mainWindow.isFullScreen();
+    mainWindow.setFullScreen(!isFullScreen);
+    return !isFullScreen;
+  }
+  return false;
+});
+
+ipcMain.handle('window:enter-kiosk-mode', async () => {
+  if (mainWindow) {
+    mainWindow.setKiosk(true);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('window:exit-kiosk-mode', async () => {
+  if (mainWindow) {
+    mainWindow.setKiosk(false);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('window:is-fullscreen', async () => {
+  if (mainWindow) {
+    return mainWindow.isFullScreen();
+  }
+  return false;
+});
+
+ipcMain.handle('window:is-kiosk', async () => {
+  if (mainWindow) {
+    return mainWindow.isKiosk();
+  }
+  return false;
+});
+
+ipcMain.handle('app:quit', async () => {
+  if (mainWindow) {
+    // Устанавливаем флаг принудительного закрытия
+    const forceCloseFn = (mainWindow as BrowserWindow & { forceClose?: () => void }).forceClose;
+    if (forceCloseFn) {
+      forceCloseFn();
+    }
+  }
+  app.quit();
+  return true;
+});
+
+ipcMain.handle('window:minimize', async () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('window:maximize', async () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+    return mainWindow.isMaximized();
+  }
+  return false;
 });

@@ -10,12 +10,12 @@ interface Store {
   archivedOrders: Order[];
   isLoading: boolean;
   error: string | null;
-  
+
   // TLS status
   tlsStatus: TlsStatus | null;
   tlsStatusLoading: boolean;
   tlsStatusError: string | null;
-  
+
   setSelectedOrder: (order: Order | null) => void;
   toggleArchiveView: () => void;
   fetchOrders: () => Promise<void>;
@@ -31,7 +31,7 @@ export const useStore = create<Store>((set, get) => ({
   archivedOrders: [],
   isLoading: false,
   error: null,
-  
+
   // TLS status initial state
   tlsStatus: null,
   tlsStatusLoading: false,
@@ -56,20 +56,20 @@ export const useStore = create<Store>((set, get) => ({
       if (!activeResponse.success) {
         throw new Error(activeResponse.error || 'Failed to fetch active orders');
       }
-      
+
       // Fetch archived orders
       const archiveResponse = await window.electronAPI.fetchOrders('ARCHIVE');
       if (!archiveResponse.success) {
         throw new Error(archiveResponse.error || 'Failed to fetch archived orders');
       }
-      
+
       // Update state with retrieved orders
-      set({ 
-        orders: activeResponse.data as Order[], 
-        archivedOrders: archiveResponse.data as Order[], 
-        isLoading: false 
+      set({
+        orders: activeResponse.data as Order[],
+        archivedOrders: archiveResponse.data as Order[],
+        isLoading: false,
       });
-      
+
       // After successful fetch, also update TLS status
       get().fetchTlsStatus();
     } catch (error) {
@@ -108,7 +108,7 @@ export const useStore = create<Store>((set, get) => ({
       if (!window.electronAPI) {
         throw new Error('Electron API is not available');
       }
-      
+
       // Call the IPC method to archive order
       const response = await window.electronAPI.archiveOrder(id);
       if (!response.success) {
@@ -129,10 +129,9 @@ export const useStore = create<Store>((set, get) => ({
       } else {
         set({ isLoading: false });
       }
-      
+
       // Update TLS status after API operation
       get().fetchTlsStatus();
-      
     } catch (error) {
       set({
         isLoading: false,
@@ -157,15 +156,14 @@ export const useStore = create<Store>((set, get) => ({
 
       // Update local state after successful API call
       const { orders } = get();
-      const updatedOrders = orders.map(order => 
-        order.id === id ? { ...order, status } as Order : order
+      const updatedOrders = orders.map(order =>
+        order.id === id ? ({ ...order, status } as Order) : order
       );
-      
+
       set({ orders: updatedOrders, isLoading: false });
-      
+
       // Update TLS status after API operation
       get().fetchTlsStatus();
-      
     } catch (error) {
       set({
         isLoading: false,

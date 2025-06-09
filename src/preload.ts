@@ -99,7 +99,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getEnhancedSerialPortInfo: (): Promise<SerialPortInfo[]> => {
     return ipcRenderer.invoke('get-enhanced-serial-port-info');
   },
-  
+
   // Получить информацию о статусе TLS соединения
   getTlsStatus: () => {
     return ipcRenderer.invoke('get-tls-status');
@@ -154,5 +154,38 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   startCertificateMonitoring: async () => {
     return await ipcRenderer.invoke('certificate:start-monitoring');
-  }
+  },
+
+  // Методы для управления окном
+  windowToggleFullscreen: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:toggle-fullscreen');
+  },
+
+  windowEnterKioskMode: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:enter-kiosk-mode');
+  },
+
+  windowExitKioskMode: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:exit-kiosk-mode');
+  },
+
+  windowIsFullscreen: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:is-fullscreen');
+  },
+
+  windowIsKiosk: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:is-kiosk');
+  },
+
+  appQuit: (): Promise<boolean> => {
+    return ipcRenderer.invoke('app:quit');
+  },
+
+  windowMinimize: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:minimize');
+  },
+
+  windowMaximize: (): Promise<boolean> => {
+    return ipcRenderer.invoke('window:maximize');
+  },
 });

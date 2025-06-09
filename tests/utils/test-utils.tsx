@@ -1,5 +1,6 @@
 
 import { Order } from '../../src/models/orders';
+import { afterEach } from 'vitest';
 
 // Тип для имитации store Zustand в тестах
 export interface TestStore {
@@ -17,7 +18,7 @@ export interface TestStore {
 }
 
 // Функция для очистки хранилища Zustand после тестов
-export function cleanupZustandStore(store: any) {
+export function cleanupZustandStore(store: TestStore & { setState: (state: Partial<TestStore>) => void }) {
   afterEach(() => {
     store.setState({
       orders: [],
@@ -52,8 +53,4 @@ export function generateTestOrder(overrides = {}): Order {
     template: 'default',
     ...overrides
   };
-}
-
-function afterEach(arg0: () => void) {
-  throw new Error('Function not implemented.');
 }
