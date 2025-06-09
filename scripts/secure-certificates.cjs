@@ -251,12 +251,15 @@ async function main() {
     
     console.log('🎉 Certificate protection completed successfully!');
     console.log(`📦 Archive path: ${archivePath}`);
-    console.log(`🔑 Password: ${isTestMode ? password : '******'}`);
-    
-    // Вывод пароля только для CI
-    if (process.env.CI === 'true') {
-      console.log(`::set-output name=archive_password::${password}`);
-      console.log(`::set-output name=archive_path::${archivePath}`);
+    console.log(`🔑 Password: ${isTestMode ? password : '******'}`);    // Вывод пароля только для CI (использует новый подход с GITHUB_OUTPUT)
+    if (process.env.CI === 'true' && process.env.GITHUB_OUTPUT) {
+      // Используем новый подход для вывода значений в GitHub Actions
+      // Безопасно экранируем значения для GitHub Actions environment file
+      const safeValue = (val) => val.replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+      
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `archive_password=${safeValue(password)}\n`);
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `archive_path=${safeValue(archivePath)}\n`);
+      console.log('✅ Output variables set for GitHub Actions');
     }
   } catch (error) {
     console.error('❌ Certificate protection failed:', error.message);

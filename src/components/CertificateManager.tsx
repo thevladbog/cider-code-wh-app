@@ -82,18 +82,99 @@ export default function CertificateManager() {
       setUpdating(true);
       setError(null);
 
+      // Предварительная проверка выбранных файлов
+      const certFileName = uploadFiles.cert.name.toLowerCase();
+      const keyFileName = uploadFiles.key.name.toLowerCase();
+      
+      // Проверяем расширения и имена файлов
+      if (!certFileName.endsWith('.pem') && !certFileName.endsWith('.crt') && !certFileName.endsWith('.cer')) {
+        setError('Файл сертификата должен иметь расширение .pem, .crt или .cer');
+        setUpdating(false);
+        return;
+      }
+      
+      if (!keyFileName.endsWith('.pem') && !keyFileName.endsWith('.key')) {
+        setError('Файл ключа должен иметь расширение .pem или .key');
+        setUpdating(false);
+        return;
+      }
+
       // Читаем содержимое файлов
-      const certData = await readFileAsText(uploadFiles.cert);
-      const keyData = await readFileAsText(uploadFiles.key);
-      const caData = uploadFiles.ca ? await readFileAsText(uploadFiles.ca) : undefined;
+      console.log('Чтение файлов сертификатов...');
+      let certData = '';
+      let keyData = '';
+      let caData = undefined;
+      
+      try {
+        certData = await readFileAsText(uploadFiles.cert);
+        console.log(`Прочитан сертификат, размер: ${certData.length} байт`);
+        
+        // Базовая проверка содержимого сертификата
+        if (!certData.includes('-----BEGIN CERTIFICATE-----')) {
+          setError('Неверный формат файла сертификата. Убедитесь, что файл содержит сертификат в формате PEM.');
+          setUpdating(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Ошибка чтения файла сертификата:', e);
+        setError(`Не удалось прочитать файл сертификата: ${e.message}`);
+        setUpdating(false);
+        return;
+      }
+      
+      try {
+        keyData = await readFileAsText(uploadFiles.key);
+        console.log(`Прочитан приватный ключ, размер: ${keyData.length} байт`);
+        
+        // Базовая проверка содержимого ключа
+        if (!keyData.includes('-----BEGIN PRIVATE KEY-----') && !keyData.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+          setError('Неверный формат файла ключа. Убедитесь, что файл содержит приватный ключ в формате PEM.');
+          setUpdating(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Ошибка чтения файла приватного ключа:', e);
+        setError(`Не удалось прочитать файл приватного ключа: ${e.message}`);
+        setUpdating(false);
+        return;
+      }
+      
+      // Чтение CA сертификата, если он есть
+      if (uploadFiles.ca) {
+        try {
+          caData = await readFileAsText(uploadFiles.ca);
+          console.log(`Прочитан CA сертификат, размер: ${caData.length} байт`);
+          
+          // Базовая проверка содержимого CA сертификата
+          if (!caData.includes('-----BEGIN CERTIFICATE-----')) {
+            console.warn('CA сертификат может быть в неверном формате. Продолжаем загрузку, но он может не работать.');
+          }
+        } catch (e) {
+          console.error('Ошибка чтения файла CA сертификата:', e);
+          // Не прерываем процесс, так как CA сертификат опциональный
+          caData = undefined;
+        }
+      }
+
       // Вызываем IPC метод для загрузки сертификатов
+      console.log('Отправка сертификатов в IPC...');
       const result = await window.electronAPI?.uploadCertificate({
         certData,
         keyData,
         caData,
       });
+      
+      console.log('Результат загрузки:', result);
+      
       if (!result?.success) {
-        setError(result?.error || 'Не удалось загрузить сертификаты');
+        let errorMessage = result?.error || 'Не удалось загрузить сертификаты';
+        
+        // Улучшаем сообщение об ошибке для пользователя
+        if (errorMessage.includes('недействителен')) {
+          errorMessage += '. Убедитесь, что файлы сертификата и ключа действительны и в правильном формате.';
+        }
+        
+        setError(errorMessage);
       } else {
         setCertInfo(result.certInfo || null);
 
@@ -106,7 +187,7 @@ export default function CertificateManager() {
       }
     } catch (err) {
       console.error('Ошибка загрузки сертификатов:', err);
-      setError('Не удалось загрузить сертификаты');
+      setError(`Не удалось загрузить сертификаты: ${err.message || 'неизвестная ошибка'}`);
     } finally {
       setUpdating(false);
     }

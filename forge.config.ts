@@ -38,23 +38,25 @@ const config: ForgeConfig = {
     },
     // Conditionally add certs as extra resources if they exist
     ...(extraResources.length > 0 && { extraResource: extraResources }),
+    // Добавляем иконку приложения
+    icon: './src/assets/logo',
     // Настройки для Windows
     win32metadata: {
       CompanyName: 'Your Company',
-      ProductName: 'Bottle Code WH App',
+      ProductName: 'Cider Code WH App',
       FileDescription: 'Warehouse Management Application',
-      OriginalFilename: 'bottle-code-wh-app.exe'
+      OriginalFilename: 'cider-code-wh-app.exe'
     }
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      setupExe: 'bottle-code-wh-app-setup.exe',
+      setupExe: 'cider-code-wh-app-setup.exe',
       noMsi: true
     }), 
     new MakerZIP({}, ['darwin']), 
     new MakerDMG({
-      name: 'Bottle Code WH App'
+      name: 'Cider Code WH App'
     }, ['darwin']),
     new MakerRpm({}), 
     new MakerDeb({})
