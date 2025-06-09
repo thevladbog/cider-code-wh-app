@@ -86,7 +86,7 @@ declare global {
         domain: string | null;
       }>;
 
-      uploadCertificates: (options: {
+      uploadCertificate: (options: {
         certData: string;
         keyData: string;
         caData?: string;

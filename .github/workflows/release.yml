@@ -76,14 +76,14 @@ jobs:
       - name: Install certificate dependencies for production
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Installing certbot and dependencies..."
+          echo "📦 Installing certbot and dependencies..."
           sudo apt-get update
           sudo apt-get install -y certbot python3-certbot-dns-cloudflare openssl
       
       - name: Validate CI environment for certificate generation
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Validating CI environment for certificate generation..."
+          echo "🔍 Validating CI environment for certificate generation..."
           node scripts/validate-ci-environment.cjs
         env:
           DOMAIN_NAME: ${{ secrets.PRODUCTION_DOMAIN_NAME }}
@@ -93,7 +93,7 @@ jobs:
       - name: Generate production certificates for stable release
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Generating production TLS certificates..."
+          echo "🔐 Generating production TLS certificates..."
           node scripts/generate-production-certs.cjs
         env:
           DOMAIN_NAME: ${{ secrets.PRODUCTION_DOMAIN_NAME }}
@@ -103,18 +103,18 @@ jobs:
       - name: Verify certificate generation
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         run: |
-          echo " Verifying generated certificates..."
+          echo "🔍 Verifying generated certificates..."
           if [ ! -f "certs/cert.pem" ] || [ ! -f "certs/key.pem" ] || [ ! -f "certs/ca.pem" ]; then
-            echo " Certificate files not found!"
+            echo "❌ Certificate files not found!"
             exit 1
           fi
           
-          echo " Certificate information:"
+          echo "📋 Certificate information:"
           openssl x509 -in certs/cert.pem -noout -subject -issuer -dates
           
-          echo " Certificate files generated:"
+          echo "🔒 Certificate files generated:"
           ls -la certs/
-          echo " Certificate generation completed successfully"
+          echo "✅ Certificate generation completed successfully"
       
       - name: Upload production certificates
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
@@ -130,9 +130,9 @@ jobs:
       - name: Note about certificates for other platforms
         if: needs.version.outputs.release_type == 'stable' && runner.os != 'Linux'
         run: |
-          echo " Production certificates are generated on Linux runner only"
-          echo " Certificates will be available as artifacts for deployment"
-          echo " Download certificates artifact and deploy to production server"
+          echo "📝 Production certificates are generated on Linux runner only"
+          echo "🔒 Certificates will be available as artifacts for deployment"
+          echo "💡 Download certificates artifact and deploy to production server"
       
       - name: Build and make application
         run: npm run make
@@ -188,18 +188,18 @@ jobs:
           body: |
             ## Release Notes
             
-            ###  New Version: v${{ needs.version.outputs.new_version }}
+            ### 🚀 New Version: v${{ needs.version.outputs.new_version }}
             
-            ###  Downloads
+            ### 📦 Downloads
             - **Windows**: .exe installer and .zip archive
             - **Linux**: .deb and .rpm packages + .zip archive  
             - **macOS**: .dmg installer and .zip archive
             
-            ###  Security Note
+            ### 🔒м Security Note
             This build includes production-ready TLS certificates generated via Let's Encrypt.
             Certificates are available as separate artifacts for deployment.
             
-            ###  Installation Notes
+            ### 📋 Installation Notes
             1. Download the appropriate package for your platform
             2. Download the production certificates artifact if needed
             3. Install the application
