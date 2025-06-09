@@ -7,16 +7,36 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Check if certs directory exists before including it
+const certsPath = path.join(__dirname, 'certs');
+const extraResources = [];
+
+// Only include certs if they exist and we're not in CI
+if (fs.existsSync(certsPath) && !process.env.CI) {
+  try {
+    // Verify we can read the directory
+    fs.readdirSync(certsPath);
+    extraResources.push('./certs');
+    console.log('✓ Including certs directory in package');
+  } catch (error) {
+    console.warn('⚠️  Certs directory exists but cannot be read, skipping...');
+  }
+} else if (process.env.CI) {
+  console.log('ℹ️  Skipping certs directory inclusion in CI environment');
+} else {
+  console.log('ℹ️  Certs directory not found, skipping...');
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: {
       unpack: '**/node_modules/{usb,@serialport,serialport,electron-squirrel-startup}/**/*'
     },
-    // Добавляем сертификаты как дополнительные ресурсы
-    extraResource: [
-      './certs'
-    ],
+    // Conditionally add certs as extra resources if they exist
+    ...(extraResources.length > 0 && { extraResource: extraResources }),
     // Настройки для Windows
     win32metadata: {
       CompanyName: 'Your Company',
