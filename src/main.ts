@@ -173,6 +173,7 @@ const createWindow = (): void => {
     frame: false, // Убираем нативную рамку для полного контроля
     titleBarStyle: 'hidden', // Скрываем заголовок окна
     backgroundColor: '#ffffff', // Фоновый цвет для избежания белого экрана
+    icon: path.join(__dirname, '../assets/logo.ico'), // Иконка приложения
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

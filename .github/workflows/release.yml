@@ -39,6 +39,18 @@ jobs:
           minor_pattern: "(MINOR)"
           version_format: "${major}.${minor}.${patch}${{ steps.branch-check.outputs.release_type == 'beta' && '-beta.${increment}' || '' }}"
           bump_each_commit: true
+          
+      - name: Send build started notification
+        run: node scripts/notify-telegram.cjs start
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ steps.semver.outputs.version }}
+          RELEASE_TYPE: ${{ steps.branch-check.outputs.release_type }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
   build:
     needs: version
@@ -49,6 +61,18 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        
+      - name: Set build platform name
+        id: platform
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "name=Windows" >> $GITHUB_OUTPUT
+          elif [ "${{ runner.os }}" == "Linux" ]; then
+            echo "name=Linux" >> $GITHUB_OUTPUT
+          else
+            echo "name=macOS" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
       
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -183,7 +207,45 @@ jobs:
             out/make/**/*.dmg
             out/make/**/*.zip
           retention-days: 30
+          
+      - name: Send error notification
+        if: failure()
+        run: node scripts/notify-telegram.cjs error
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ needs.version.outputs.new_version }}
+          RELEASE_TYPE: ${{ needs.version.outputs.release_type }}
+          BUILD_PLATFORM: ${{ steps.platform.outputs.name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          ERROR_MESSAGE: "Build failed on ${{ runner.os }} platform"
 
+  beta-release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    if: needs.version.outputs.release_type == 'beta'
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+      
+      - name: Send beta success notification
+        if: success()
+        run: node scripts/notify-telegram.cjs success
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ needs.version.outputs.new_version }}
+          RELEASE_TYPE: ${{ needs.version.outputs.release_type }}
+          BUILD_PLATFORM: "All Platforms"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          ARTIFACTS_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+  
   release:
     needs: [version, build]
     runs-on: ubuntu-latest
@@ -243,3 +305,18 @@ jobs:
             secure-certificates-${{ needs.version.outputs.new_version }}/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Send success notification for stable release
+        if: success()
+        run: node scripts/notify-telegram.cjs success
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ needs.version.outputs.new_version }}
+          RELEASE_TYPE: ${{ needs.version.outputs.release_type }}
+          BUILD_PLATFORM: "All Platforms"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          ARTIFACTS_URL: "${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.version.outputs.new_version }}"
