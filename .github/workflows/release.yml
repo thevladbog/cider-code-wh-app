@@ -116,15 +116,31 @@ jobs:
           ls -la certs/
           echo "✅ Certificate generation completed successfully"
       
-      - name: Upload production certificates
+      - name: Install certificate archiving tools
+        if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
+        run: |
+          echo "📦 Installing tools for secure certificate archiving..."
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full zip
+      
+      - name: Secure certificates with password
+        if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
+        id: secure-certs
+        run: |
+          echo "🔒 Securing certificates with password protection..."
+          node scripts/secure-certificates.cjs
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ needs.version.outputs.new_version }}
+
+      - name: Upload secure certificates
         if: needs.version.outputs.release_type == 'stable' && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: production-certificates-${{ needs.version.outputs.new_version }}
+          name: secure-certificates-${{ needs.version.outputs.new_version }}
           path: |
-            certs/cert.pem
-            certs/key.pem
-            certs/ca.pem
+            secure-certs/*.zip
           retention-days: 7
       
       - name: Note about certificates for other platforms
@@ -195,22 +211,35 @@ jobs:
             - **Linux**: .deb and .rpm packages + .zip archive  
             - **macOS**: .dmg installer and .zip archive
             
-            ### 🔒м Security Note
-            This build includes production-ready TLS certificates generated via Let's Encrypt.
-            Certificates are available as separate artifacts for deployment.
+            ### 🔒 Security Note
+            This build includes password-protected TLS certificates generated via Let's Encrypt.
+            Certificates are archived with encryption, and the password is sent to a secure Telegram channel.
+            Contact your system administrator to obtain the password for certificate extraction.
             
             ### 📋 Installation Notes
             1. Download the appropriate package for your platform
-            2. Download the production certificates artifact if needed
-            3. Install the application
-            4. Deploy certificates to /certs/ directory on production server
-            5. Run the application
+            2. Download the secure certificates archive if needed
+            3. Obtain the password from the administrator (sent via secure Telegram channel)
+            4. Extract the certificates using the provided password:
+               ```
+               # Linux/macOS
+               unzip -P "your-password" secure-certificates-v*.zip -d ./certs/
+               chmod 600 ./certs/key.pem
+               chmod 644 ./certs/cert.pem ./certs/ca.pem
+               
+               # Windows PowerShell
+               Expand-Archive -Path "secure-certificates-v*.zip" -DestinationPath "./certs/" 
+               # (will prompt for password)
+               ```
+            5. Install the application
+            6. Deploy extracted certificates to /certs/ directory on production server
+            7. Run the application
             
             For certificate setup, see documentation in the repository.
           files: |
             windows-release-${{ needs.version.outputs.new_version }}/**/*
             linux-release-${{ needs.version.outputs.new_version }}/**/*
             macos-release-${{ needs.version.outputs.new_version }}/**/*
-            production-certificates-${{ needs.version.outputs.new_version }}/**/*
+            secure-certificates-${{ needs.version.outputs.new_version }}/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
