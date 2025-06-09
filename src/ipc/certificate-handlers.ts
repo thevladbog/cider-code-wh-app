@@ -59,14 +59,22 @@ export function registerCertificateIPCHandlers() {
 
       // Проверка формата сертификата
       if (!options.certData.includes('-----BEGIN CERTIFICATE-----')) {
-        console.error('[IPC] Неверный формат данных сертификата - отсутствует маркер BEGIN CERTIFICATE');
+        console.error(
+          '[IPC] Неверный формат данных сертификата - отсутствует маркер BEGIN CERTIFICATE'
+        );
         throw new Error('Неверный формат файла сертификата');
       }
 
       // Проверка формата приватного ключа
-      if (!(options.keyData.includes('-----BEGIN PRIVATE KEY-----') || 
-            options.keyData.includes('-----BEGIN RSA PRIVATE KEY-----'))) {
-        console.error('[IPC] Неверный формат данных приватного ключа - отсутствует маркер BEGIN PRIVATE KEY');
+      if (
+        !(
+          options.keyData.includes('-----BEGIN PRIVATE KEY-----') ||
+          options.keyData.includes('-----BEGIN RSA PRIVATE KEY-----')
+        )
+      ) {
+        console.error(
+          '[IPC] Неверный формат данных приватного ключа - отсутствует маркер BEGIN PRIVATE KEY'
+        );
         throw new Error('Неверный формат файла приватного ключа');
       }
 
@@ -86,7 +94,9 @@ export function registerCertificateIPCHandlers() {
       if (options.caData) {
         console.log('[IPC] Запись данных CA сертификата в файл');
         if (!options.caData.includes('-----BEGIN CERTIFICATE-----')) {
-          console.warn('[IPC] CA сертификат не содержит маркер BEGIN CERTIFICATE. Проверьте формат.');
+          console.warn(
+            '[IPC] CA сертификат не содержит маркер BEGIN CERTIFICATE. Проверьте формат.'
+          );
         }
         fs.writeFileSync(caFile, options.caData);
       }
@@ -94,9 +104,9 @@ export function registerCertificateIPCHandlers() {
       // Проверяем валидность загруженных сертификатов
       console.log('[IPC] Валидация загруженного сертификата');
       const certInfo = validateCertificate(certFile);
-      
+
       console.log('[IPC] Результат валидации:', certInfo.valid ? 'Действителен' : 'Недействителен');
-      
+
       // Детальное логирование выявленных проблем
       console.log('[IPC] Информация о сертификате:', {
         valid: certInfo.valid,
@@ -105,14 +115,16 @@ export function registerCertificateIPCHandlers() {
         notBefore: certInfo.notBefore,
         notAfter: certInfo.notAfter,
       });
-      
+
       if (!certInfo.valid) {
         // Подробная информация о причине недействительности
         let reason = 'Загруженный сертификат недействителен';
-        
+
         if (!certInfo.domain) {
           reason += ': отсутствует информация о домене (CN или альтернативные поля)';
-          console.error('[IPC] Отсутствует информация о домене. Попробуйте использовать сертификат с указанным CN или SAN полями.');
+          console.error(
+            '[IPC] Отсутствует информация о домене. Попробуйте использовать сертификат с указанным CN или SAN полями.'
+          );
         } else if (!certInfo.issuer) {
           reason += ': отсутствует информация о издателе';
         } else if (certInfo.notBefore && new Date() < certInfo.notBefore) {
@@ -120,7 +132,7 @@ export function registerCertificateIPCHandlers() {
         } else if (certInfo.notAfter && new Date() > certInfo.notAfter) {
           reason += ': срок действия сертификата истек';
         }
-        
+
         throw new Error(reason);
       }
 
@@ -129,37 +141,41 @@ export function registerCertificateIPCHandlers() {
         // Используем встроенный модуль child_process
         const { execFile } = await import('child_process');
         const script = path.join(process.cwd(), 'scripts', 'verify-cert-key-pair.cjs');
-        
+
         console.log('[IPC] Проверка соответствия сертификата и приватного ключа');
-        
+
         // Выполняем скрипт проверки асинхронно
         const verifyPromise = new Promise<boolean>((resolve, reject) => {
-          execFile('node', [script, certFile, keyFile], (error: Error | null, stdout: string, stderr: string) => {
-            if (error) {
-              console.error('[IPC] Ошибка при проверке пары сертификат/ключ:', error);
-              console.error(stderr);
-              reject(new Error('Сертификат и приватный ключ не соответствуют друг другу'));
-            } else {
-              console.log('[IPC] Результат проверки пары сертификат/ключ:');
-              console.log(stdout);
-              resolve(true);
+          execFile(
+            'node',
+            [script, certFile, keyFile],
+            (error: Error | null, stdout: string, stderr: string) => {
+              if (error) {
+                console.error('[IPC] Ошибка при проверке пары сертификат/ключ:', error);
+                console.error(stderr);
+                reject(new Error('Сертификат и приватный ключ не соответствуют друг другу'));
+              } else {
+                console.log('[IPC] Результат проверки пары сертификат/ключ:');
+                console.log(stdout);
+                resolve(true);
+              }
             }
-          });
+          );
         });
-        
+
         // Ожидаем результат с таймаутом 5 секунд
         await Promise.race([
           verifyPromise,
-          new Promise<boolean>((_, reject) => 
+          new Promise<boolean>((_, reject) =>
             setTimeout(() => reject(new Error('Тайм-аут при проверке сертификата')), 5000)
-          )
+          ),
         ]);
       } catch (verifyError) {
         console.error('[IPC] Ошибка при проверке сертификата и ключа:', verifyError);
         // Продолжаем выполнение даже при ошибке, но логируем предупреждение
         console.warn('[IPC] Продолжение процесса несмотря на ошибку проверки');
       }
-      
+
       // Перезагружаем HTTPS агент
       console.log('[IPC] Обновление сертификатов');
       await updateCertificates(certsDir, true);

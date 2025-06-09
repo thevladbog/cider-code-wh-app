@@ -85,14 +85,18 @@ export default function CertificateManager() {
       // Предварительная проверка выбранных файлов
       const certFileName = uploadFiles.cert.name.toLowerCase();
       const keyFileName = uploadFiles.key.name.toLowerCase();
-      
+
       // Проверяем расширения и имена файлов
-      if (!certFileName.endsWith('.pem') && !certFileName.endsWith('.crt') && !certFileName.endsWith('.cer')) {
+      if (
+        !certFileName.endsWith('.pem') &&
+        !certFileName.endsWith('.crt') &&
+        !certFileName.endsWith('.cer')
+      ) {
         setError('Файл сертификата должен иметь расширение .pem, .crt или .cer');
         setUpdating(false);
         return;
       }
-      
+
       if (!keyFileName.endsWith('.pem') && !keyFileName.endsWith('.key')) {
         setError('Файл ключа должен иметь расширение .pem или .key');
         setUpdating(false);
@@ -104,14 +108,16 @@ export default function CertificateManager() {
       let certData = '';
       let keyData = '';
       let caData = undefined;
-      
+
       try {
         certData = await readFileAsText(uploadFiles.cert);
         console.log(`Прочитан сертификат, размер: ${certData.length} байт`);
-        
+
         // Базовая проверка содержимого сертификата
         if (!certData.includes('-----BEGIN CERTIFICATE-----')) {
-          setError('Неверный формат файла сертификата. Убедитесь, что файл содержит сертификат в формате PEM.');
+          setError(
+            'Неверный формат файла сертификата. Убедитесь, что файл содержит сертификат в формате PEM.'
+          );
           setUpdating(false);
           return;
         }
@@ -121,14 +127,19 @@ export default function CertificateManager() {
         setUpdating(false);
         return;
       }
-      
+
       try {
         keyData = await readFileAsText(uploadFiles.key);
         console.log(`Прочитан приватный ключ, размер: ${keyData.length} байт`);
-        
+
         // Базовая проверка содержимого ключа
-        if (!keyData.includes('-----BEGIN PRIVATE KEY-----') && !keyData.includes('-----BEGIN RSA PRIVATE KEY-----')) {
-          setError('Неверный формат файла ключа. Убедитесь, что файл содержит приватный ключ в формате PEM.');
+        if (
+          !keyData.includes('-----BEGIN PRIVATE KEY-----') &&
+          !keyData.includes('-----BEGIN RSA PRIVATE KEY-----')
+        ) {
+          setError(
+            'Неверный формат файла ключа. Убедитесь, что файл содержит приватный ключ в формате PEM.'
+          );
           setUpdating(false);
           return;
         }
@@ -138,16 +149,18 @@ export default function CertificateManager() {
         setUpdating(false);
         return;
       }
-      
+
       // Чтение CA сертификата, если он есть
       if (uploadFiles.ca) {
         try {
           caData = await readFileAsText(uploadFiles.ca);
           console.log(`Прочитан CA сертификат, размер: ${caData.length} байт`);
-          
+
           // Базовая проверка содержимого CA сертификата
           if (!caData.includes('-----BEGIN CERTIFICATE-----')) {
-            console.warn('CA сертификат может быть в неверном формате. Продолжаем загрузку, но он может не работать.');
+            console.warn(
+              'CA сертификат может быть в неверном формате. Продолжаем загрузку, но он может не работать.'
+            );
           }
         } catch (e) {
           console.error('Ошибка чтения файла CA сертификата:', e);
@@ -163,17 +176,18 @@ export default function CertificateManager() {
         keyData,
         caData,
       });
-      
+
       console.log('Результат загрузки:', result);
-      
+
       if (!result?.success) {
         let errorMessage = result?.error || 'Не удалось загрузить сертификаты';
-        
+
         // Улучшаем сообщение об ошибке для пользователя
         if (errorMessage.includes('недействителен')) {
-          errorMessage += '. Убедитесь, что файлы сертификата и ключа действительны и в правильном формате.';
+          errorMessage +=
+            '. Убедитесь, что файлы сертификата и ключа действительны и в правильном формате.';
         }
-        
+
         setError(errorMessage);
       } else {
         setCertInfo(result.certInfo || null);
