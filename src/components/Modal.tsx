@@ -293,11 +293,12 @@ const Modal: React.FC = () => {
         <div className="flex justify-between space-x-4 mt-3">
           <button
             onClick={() => setSelectedOrder(null)}
-            className="bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 dark:active:bg-gray-500 text-gray-800 dark:text-white font-bold py-4 px-6 rounded-lg shadow-sm touch-manipulation min-w-[100px] transition-colors"
+            className="flex items-center justify-center bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 dark:active:bg-gray-500 text-gray-800 dark:text-white font-bold py-4 px-6 rounded-lg shadow-sm touch-manipulation min-w-[100px] transition-colors"
             style={{ minHeight: '56px' }}
           >
-            Отмена
+            <span>Отмена</span>
           </button>
+
 
           <button
             onClick={handleArchiveWithoutPrint}

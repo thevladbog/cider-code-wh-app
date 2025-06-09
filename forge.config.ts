@@ -11,11 +11,30 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: {
-      unpack: '**/node_modules/{usb,@serialport,serialport}/**/*'
+      unpack: '**/node_modules/{usb,@serialport,serialport,electron-squirrel-startup}/**/*'
     },
+    // Добавляем сертификаты как дополнительные ресурсы
+    extraResource: [
+      './certs'
+    ],
+    // Настройки для Windows
+    win32metadata: {
+      CompanyName: 'Your Company',
+      ProductName: 'Bottle Code WH App',
+      FileDescription: 'Warehouse Management Application',
+      OriginalFilename: 'bottle-code-wh-app.exe'
+    }
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    new MakerSquirrel({
+      setupExe: 'bottle-code-wh-app-setup.exe',
+      noMsi: true
+    }), 
+    new MakerZIP({}, ['darwin']), 
+    new MakerRpm({}), 
+    new MakerDeb({})
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({

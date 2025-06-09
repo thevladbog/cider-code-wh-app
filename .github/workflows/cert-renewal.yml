@@ -1,0 +1,40 @@
+﻿name: TLS Certificate Management
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  check-and-renew-certificates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check and renew certificates
+        run: |
+          echo "Checking certificate status..."
+          # Only check certificate expiration, don't generate new ones in CI
+          node scripts/renew-certificates.cjs --check-only
+        env:
+          DOMAIN_NAME: 'localhost'
+      
+      - name: Notify if certificates need renewal
+        run: |
+          echo "⚠️  Certificate renewal notification:"
+          echo "Certificates should be renewed locally or on the deployment server."
+          echo "This CI workflow only checks certificate status for monitoring purposes."
+          echo "🔒 Remember: Certificates are never committed to Git for security reasons."
+          
+      # Note: Certificate renewal should be done on the deployment server or locally
+      # Certificates are excluded from Git repository for security (.gitignore)

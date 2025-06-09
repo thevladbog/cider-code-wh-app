@@ -3,31 +3,9 @@
 import { format } from 'date-fns';
 
 // Интерфейс для параметров печати через Electron API
-interface PrintLabelsOptions {
+export interface PrintLabelsOptions {
   labels: string[];
   printerName?: string;
-}
-
-declare global {
-  interface Window {
-    electronAPI?: {
-      printLabels: (options: PrintLabelsOptions) => Promise<boolean>;
-      getPrinters: () => Promise<PrinterConfig[]>;
-      savePrinterConfig: (config: PrinterConfig[]) => Promise<{
-        success: boolean;
-        message: string;
-        loadedConfig?: PrinterConfig[];
-      }>;
-      testPrinterConnection?: (
-        printerConfig: PrinterConfig
-      ) => Promise<{ success: boolean; message: string }>;
-      getSystemPrinters?: () => Promise<{ name: string; portName: string; isDefault: boolean }[]>;
-      printRawToPrinter?: (
-        printerName: string,
-        rawData: string
-      ) => Promise<{ success: boolean; message: string }>;
-    };
-  }
 }
 
 export interface PrintOptions {
@@ -37,12 +15,15 @@ export interface PrintOptions {
 }
 
 // Remove all serial/usb logic and types, only support network printers
+// Use the same interface as defined globally in electron-api.d.ts
 export interface PrinterConfig {
   name: string;
-  connectionType: 'network';
-  ip: string;
-  port: number;
-  isDefault?: boolean;
+  connectionType: 'network' | 'usb';
+  ip?: string;
+  port?: number;
+  usbPath?: string;
+  baudRate?: number;
+  isDefault: boolean;
 }
 
 export interface PrintData extends PrintOptions {
@@ -93,7 +74,35 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
           .replace(/{{currentLabel}}/g, i.toString())
           .replace(/{{totalLabels}}/g, count.toString());
 
-        const deliveryDateBarcode = format(deliveryDate, 'ddMMyy');
+        // Проверяем и обрабатываем дату доставки
+        let deliveryDateObj: Date | null = null;
+        let deliveryDateBarcode = '';
+        let formattedDeliveryDate = '';
+
+        if (deliveryDate) {
+          try {
+            // Пытаемся создать объект Date из строки
+            deliveryDateObj = new Date(deliveryDate);
+            
+            // Проверяем, что дата валидна
+            if (!isNaN(deliveryDateObj.getTime())) {
+              deliveryDateBarcode = format(deliveryDateObj, 'ddMMyy');
+              formattedDeliveryDate = format(deliveryDateObj, 'dd.MM. yyyy г.');
+            } else {
+              console.warn('[PRINT] Предупреждение: Некорректная дата доставки:', deliveryDate);
+              deliveryDateBarcode = 'NODATE';
+              formattedDeliveryDate = 'Дата не указана';
+            }
+          } catch (error) {
+            console.warn('[PRINT] Ошибка при парсинге даты доставки:', deliveryDate, error);
+            deliveryDateBarcode = 'NODATE';
+            formattedDeliveryDate = 'Дата не указана';
+          }
+        } else {
+          deliveryDateBarcode = 'NODATE';
+          formattedDeliveryDate = 'Дата не указана';
+        }
+
         const pieceNumberBarcode = 'P' + i.toString().padStart(3, '0');
         const orderNumberBarcode =
           deliveryDateBarcode + (orderNumber ? `-${orderNumber}` : '') + pieceNumberBarcode;
@@ -106,11 +115,7 @@ export const printLabels = (options: PrintData): Promise<boolean> => {
         if (orderNumber) labelContent = labelContent.replace(/{{orderNumber}}/g, orderNumber);
         if (consignee) labelContent = labelContent.replace(/{{consignee}}/g, consignee);
         if (address) labelContent = labelContent.replace(/{{address}}/g, address);
-        if (deliveryDate)
-          labelContent = labelContent.replace(
-            /{{deliveryDate}}/g,
-            format(deliveryDate, 'dd.MM. yyyy г.')
-          );
+        labelContent = labelContent.replace(/{{deliveryDate}}/g, formattedDeliveryDate);
 
         // Add Swiss721 font selection command if not already present
         // Insert ^A@ command after ^XA if not already added

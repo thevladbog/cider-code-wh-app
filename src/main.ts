@@ -1,22 +1,99 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
-// Закомментировано из-за неиспользуемого импорта
-// import started from 'electron-squirrel-startup';
 import fs from 'node:fs';
+
+// Handle squirrel events properly - only exit during actual installation events
+const handleSquirrelEvents = () => {
+  if (process.platform !== 'win32') return false;
+  
+  const cmd = process.argv[1];
+  if (!cmd) return false;
+  
+  // Only handle actual Squirrel installer events, not normal app launch
+  if (cmd.includes('--squirrel-install') || 
+      cmd.includes('--squirrel-updated') || 
+      cmd.includes('--squirrel-uninstall') || 
+      cmd.includes('--squirrel-obsolete')) {
+    console.log('Squirrel installer event detected:', cmd);
+    app.quit();
+    return true;
+  }
+  
+  return false;
+};
+
+// Only exit if we're actually handling a Squirrel installer event
+if (handleSquirrelEvents()) {
+  // App will quit, no need to continue
+}
 import net from 'node:net';
-import { exec } from 'child_process';
+// import { exec } from 'child_process'; // Commented out - not used
 import { initEnvironment } from './config/environment';
 
+// Импорт функций для получения конфигурации API
+import { getApiConfig, API_ENDPOINTS } from './config/api.config';
+
+// Импорт функций для TLS
+import { setupCertificateVerification } from './config/tls.config';
+import { secureFetch } from './config/secure-fetch';
+import { getTlsStatus } from './config/tls-status';
+import { registerCertificateIPCHandlers } from './ipc/certificate-handlers';
+import { startCertificateMonitoring } from './utils/cert-manager';
+
+// Windows-specific optimizations
+if (process.platform === 'win32') {
+  // Increase memory limit for Windows
+  app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
+  // Disable GPU sandbox for better compatibility
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+}
+
 // Инициализация окружения
-initEnvironment();
+try {
+  initEnvironment();
+  console.log('Environment initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize environment:', error);
+}
+
+// Настройка TLS сертификатов при запуске приложения
+try {
+  setupCertificateVerification();
+  console.log('Certificate verification setup completed');
+} catch (error) {
+  console.error('Failed to setup certificate verification:', error);
+}
+
+// Регистрация IPC обработчиков для работы с сертификатами
+try {
+  registerCertificateIPCHandlers();
+  console.log('Certificate IPC handlers registered');
+} catch (error) {
+  console.error('Failed to register certificate IPC handlers:', error);
+}
+
+// Запуск мониторинга сертификатов (проверка каждые 24 часа)
+try {
+  startCertificateMonitoring();
+  console.log('Certificate monitoring started');
+} catch (error) {
+  console.error('Failed to start certificate monitoring:', error);
+}
 
 // Отображение ошибок в главном процессе
 process.on('uncaughtException', error => {
   console.error('Uncaught Exception in Main Process:', error);
+  // В production не завершаем процесс сразу, даем время для восстановления
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
 });
 
-// Импорт функций для получения конфигурации API
-import { getApiConfig, API_ENDPOINTS } from './config/api.config';
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Squirrel events are already handled above
 
 // Интерфейсы для работы с API
 interface ApiRequestOptions {
@@ -49,513 +126,131 @@ const loadPrinterConfig = (): PrinterConfig[] => {
     if (fs.existsSync(configPath)) {
       const configData = fs.readFileSync(configPath, 'utf8');
       console.log(`[CONFIG] Файл конфигурации найден, размер: ${configData.length} байт`);
-
-      try {
-        const parsedData = JSON.parse(configData);
-
-        // Проверяем формат данных
-        if (Array.isArray(parsedData)) {
-          console.log(`[CONFIG] Загружено ${parsedData.length} принтеров`);
-          // Дополнительная валидация
-          const validPrinters = parsedData.filter(p => {
-            // Базовая валидация для всех принтеров
-            if (
-              !(
-                p &&
-                typeof p === 'object' &&
-                typeof p.name === 'string' &&
-                p.name.trim() !== '' &&
-                typeof p.connectionType === 'string'
-              )
-            ) {
-              return false;
-            }
-
-            // Валидация для сетевых принтеров
-            if (p.connectionType === 'network') {
-              return (
-                typeof p.ip === 'string' &&
-                p.ip.trim() !== '' &&
-                typeof p.port === 'number' &&
-                p.port > 0
-              );
-            }
-
-            return false;
-          });
-
-          if (validPrinters.length < parsedData.length) {
-            console.warn(
-              `[CONFIG] Предупреждение: ${parsedData.length - validPrinters.length} невалидных принтеров были отфильтрованы`
-            );
-          }
-
-          // Если есть хотя бы один валидный принтер, возвращаем его
-          if (validPrinters.length > 0) {
-            return validPrinters;
-          } else {
-            console.warn('[CONFIG] Нет валидных принтеров в конфигурации');
-            // Возвращаем пустой массив вместо предустановленных принтеров
-            return [];
-          }
-        } else {
-          console.error('[CONFIG] Ошибка: Неверный формат файла конфигурации (ожидается массив)');
-        }
-      } catch (parseError) {
-        console.error('[CONFIG] Ошибка при разборе JSON-файла конфигурации:', parseError);
-      }
-    } else {
-      console.log(
-        '[CONFIG] Файл конфигурации не найден, будет использован пустой список принтеров'
-      );
+      return JSON.parse(configData);
     }
   } catch (error) {
-    console.error('[CONFIG] Ошибка при загрузке конфигурации принтеров:', error);
+    console.error('[CONFIG] Ошибка загрузки конфигурации принтеров:', error);
   }
 
-  // Возвращаем пустой массив вместо предустановленных принтеров
-  console.log('[CONFIG] Возврат пустого списка принтеров (без предустановленных)');
+  // Возвращаем пустой массив, если не удалось загрузить конфигурацию
   return [];
 };
 
 // Сохранение конфигурации принтеров
 const savePrinterConfig = (config: PrinterConfig[]): boolean => {
   try {
-    if (!config || !Array.isArray(config)) {
-      console.error('[CONFIG] Ошибка: входные данные не являются массивом конфигураций принтеров');
-      return false;
-    }
-
     const configPath = path.join(app.getPath('userData'), 'printers.json');
-    console.log(`[CONFIG] Сохранение конфигурации принтеров в ${configPath}`);
-    console.log(`[CONFIG] Каталог userData: ${app.getPath('userData')}`);
-    console.log('[CONFIG] Данные для сохранения:', JSON.stringify(config, null, 2));
-    // Валидация данных перед сохранением
-    const validConfig = config.filter(p => {
-      // Базовая валидация для всех принтеров
-      if (
-        !(
-          p &&
-          typeof p === 'object' &&
-          typeof p.name === 'string' &&
-          p.name.trim() !== '' &&
-          typeof p.connectionType === 'string'
-        )
-      ) {
-        return false;
-      }
-
-      // Валидация для сетевых принтеров
-      if (p.connectionType === 'network') {
-        return (
-          typeof p.ip === 'string' && p.ip.trim() !== '' && typeof p.port === 'number' && p.port > 0
-        );
-      }
-
-      return false;
-    });
-
-    console.log(
-      `[CONFIG] После валидации: ${validConfig.length} из ${config.length} принтеров прошли проверку`
-    );
-
-    if (validConfig.length < config.length) {
-      console.warn(
-        `[CONFIG] Предупреждение: ${config.length - validConfig.length} невалидных принтеров не будут сохранены`
-      );
-    }
-
-    // Проверяем наличие принтера по умолчанию
-    const hasDefault = validConfig.some(printer => printer.isDefault);
-    if (!hasDefault && validConfig.length > 0) {
-      console.warn(
-        '[CONFIG] Не указан принтер по умолчанию, устанавливаем первый принтер как принтер по умолчанию'
-      );
-      validConfig[0].isDefault = true;
-    }
-
-    // Создаем папку, если она не существует
-    const dirPath = path.dirname(configPath);
-    try {
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-        console.log(`[CONFIG] Создана директория: ${dirPath}`);
-      }
-
-      // Проверяем права доступа к директории
-      try {
-        // Проверяем возможность записи
-        const testFile = path.join(dirPath, '.test_write_access');
-        fs.writeFileSync(testFile, 'test');
-        fs.unlinkSync(testFile); // Удаляем тестовый файл
-        console.log(`[CONFIG] Проверка прав доступа: запись в директорию ${dirPath} разрешена`);
-      } catch (accessError) {
-        console.error(`[CONFIG] Ошибка: нет прав на запись в директорию ${dirPath}:`, accessError);
-        return false;
-      }
-    } catch (dirError) {
-      console.error(`[CONFIG] Ошибка при создании или проверке директории ${dirPath}:`, dirError);
-      return false;
-    }
-
-    // Безопасная запись файла
-    try {
-      // Бэкапим предыдущую конфигурацию, если она существует
-      if (fs.existsSync(configPath)) {
-        try {
-          const backupPath = `${configPath}.backup`;
-          fs.copyFileSync(configPath, backupPath);
-          console.log(`[CONFIG] Создан бэкап предыдущей конфигурации: ${backupPath}`);
-        } catch (backupError) {
-          console.warn('[CONFIG] Не удалось создать бэкап предыдущей конфигурации:', backupError);
-        }
-      }
-
-      // Создаем временный файл конфигурации
-      const tempConfigPath = `${configPath}.temp`;
-      fs.writeFileSync(tempConfigPath, JSON.stringify(validConfig, null, 2));
-      console.log(`[CONFIG] Временный файл конфигурации создан: ${tempConfigPath}`);
-
-      // Проверяем содержимое временного файла
-      try {
-        const tempContent = fs.readFileSync(tempConfigPath, 'utf8');
-        const tempPrinters = JSON.parse(tempContent);
-
-        if (!Array.isArray(tempPrinters) || tempPrinters.length !== validConfig.length) {
-          console.error('[CONFIG] Ошибка в временном файле конфигурации, отмена сохранения');
-          fs.unlinkSync(tempConfigPath);
-          return false;
-        }
-      } catch (tempError) {
-        console.error('[CONFIG] Ошибка при проверке временного файла:', tempError);
-        return false;
-      }
-
-      // Переименовываем временный файл в окончательный (атомарная операция)
-      try {
-        // Удаляем существующий файл, если он есть
-        if (fs.existsSync(configPath)) {
-          fs.unlinkSync(configPath);
-        }
-
-        // Переименовываем временный файл
-        fs.renameSync(tempConfigPath, configPath);
-        console.log(
-          `[CONFIG] Конфигурация принтеров успешно сохранена (${validConfig.length} принтеров)`
-        );
-      } catch (renameError) {
-        console.error('[CONFIG] Ошибка при переименовании временного файла:', renameError);
-        return false;
-      }
-
-      // Финальная проверка
-      if (fs.existsSync(configPath)) {
-        const stats = fs.statSync(configPath);
-        console.log(`[CONFIG] Файл конфигурации создан: ${configPath}, размер: ${stats.size} байт`);
-
-        try {
-          const savedContent = fs.readFileSync(configPath, 'utf8');
-          console.log('[CONFIG] Прочитано содержимое файла, длина:', savedContent.length);
-
-          const savedPrinters = JSON.parse(savedContent);
-
-          if (Array.isArray(savedPrinters) && savedPrinters.length === validConfig.length) {
-            console.log(
-              `[CONFIG] Верификация: файл содержит ${savedPrinters.length} принтеров, как и ожидалось`
-            );
-          } else {
-            console.error(
-              `[CONFIG] Ошибка верификации: файл содержит ${
-                Array.isArray(savedPrinters) ? savedPrinters.length : 'неверный формат'
-              }, ожидалось ${validConfig.length}`
-            );
-            return false;
-          }
-        } catch (verifyError) {
-          console.error('[CONFIG] Ошибка при верификации сохраненного файла:', verifyError);
-          return false;
-        }
-      } else {
-        console.error('[CONFIG] Ошибка: файл не был создан после переименования!');
-        return false;
-      }
-    } catch (writeError) {
-      console.error('[CONFIG] Ошибка при записи файла конфигурации:', writeError);
-      return false;
-    }
-
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log(`[CONFIG] Конфигурация принтеров сохранена в ${configPath}`);
     return true;
   } catch (error) {
-    console.error('[CONFIG] Ошибка при сохранении конфигурации принтеров:', error);
-    // Подробно логируем ошибку для отладки
-    console.error('[CONFIG] Тип ошибки:', typeof error);
-    console.error(
-      '[CONFIG] Детали ошибки:',
-      JSON.stringify(error, Object.getOwnPropertyNames(error))
-    );
-
-    if (error instanceof Error) {
-      console.error('[CONFIG] Stack trace:', error.stack);
-    }
-
+    console.error('[CONFIG] Ошибка сохранения конфигурации принтеров:', error);
     return false;
   }
 };
 
-// Получение списка системных принтеров (Windows, через PowerShell)
-ipcMain.handle('get-system-printers', async () => {
-  return new Promise<{ name: string; portName: string; isDefault: boolean }[]>(resolve => {
-    exec(
-      'Get-WmiObject Win32_Printer | Select-Object Name,PortName,Default | ConvertTo-Json',
-      { shell: 'powershell.exe' },
-      (err, stdout) => {
-        if (err) {
-          resolve([]);
-          return;
-        }
-        try {
-          const printers = JSON.parse(stdout);
-          const arr = Array.isArray(printers) ? printers : [printers];
-          resolve(
-            arr.map(p => ({
-              name: p.Name as string,
-              portName: p.PortName as string,
-              isDefault: !!p.Default,
-            }))
-          );
-        } catch {
-          resolve([]);
-        }
-      }
-    );
-  });
-});
+// Глобальная переменная для хранения принтеров
+let printersList: PrinterConfig[] = [];
 
-// RAW печать на выбранный принтер (Windows, через lpr)
-ipcMain.handle('print-raw-to-printer', async (_event, printerName: string, rawData: string) => {
-  return new Promise<{ success: boolean; message: string }>(resolve => {
-    try {
-      const tmpPath = path.join(app.getPath('temp'), `raw_${Date.now()}.zpl`);
-      fs.writeFileSync(tmpPath, rawData, 'utf8');
-      // lpr должен быть установлен в системе (Windows Feature: Print and Document Services > LPR Port Monitor)
-      const cmd = `lpr -S localhost -P "${printerName}" "${tmpPath}" && del "${tmpPath}"`;
-      exec(cmd, { shell: 'cmd.exe' }, err => {
-        if (err) {
-          resolve({ success: false, message: 'Ошибка печати: ' + err.message });
-        } else {
-          resolve({ success: true, message: 'Печать отправлена' });
-        }
-      });
-    } catch (e) {
-      resolve({
-        success: false,
-        message: 'Ошибка печати: ' + (e instanceof Error ? e.message : String(e)),
-      });
-    }
-  });
-});
+// Загрузка конфигурации принтеров при запуске приложения
+printersList = loadPrinterConfig();
 
-// Универсальная функция печати
-async function printLabelSmart(options: {
-  labels: string[];
-  printerName?: string;
-}): Promise<{ success: boolean; message: string }> {
-  const { labels, printerName } = options;
-  const printers = loadPrinterConfig();
-  let target: PrinterConfig | undefined = undefined;
-  if (printerName) {
-    target = printers.find(p => p.name === printerName);
-  } else {
-    target = printers.find(p => p.isDefault);
-  }
-  if (!target) {
-    return { success: false, message: 'Принтер не найден в конфиге' };
-  }
-  const rawData = labels.join('\n');
-  // Сетевой принтер (RAW TCP/IP)
-  if (target.connectionType === 'network' && target.ip && target.port) {
-    return await new Promise(resolve => {
-      const client = new net.Socket();
-      client.connect(target.port, target.ip, () => {
-        client.write(rawData, () => {
-          client.end();
-          resolve({ success: true, message: 'Печать отправлена на сетевой принтер' });
-        });
-      });
-      client.on('error', err => {
-        resolve({ success: false, message: 'Ошибка печати (TCP/IP): ' + err.message });
-      });
-    });
-  }
-  // Fallback: lpr (Windows очередь)
-  return await new Promise(resolve => {
-    try {
-      const tmpPath = path.join(app.getPath('temp'), `raw_${Date.now()}.zpl`);
-      fs.writeFileSync(tmpPath, rawData, 'utf8');
-      const cmd = `lpr -S localhost -P "${printerName || ''}" "${tmpPath}" && del "${tmpPath}"`;
-      exec(cmd, { shell: 'cmd.exe' }, err => {
-        if (err) {
-          resolve({ success: false, message: 'Ошибка печати (lpr): ' + err.message });
-        } else {
-          resolve({ success: true, message: 'Печать отправлена через lpr' });
-        }
-      });
-    } catch (e) {
-      resolve({
-        success: false,
-        message: 'Ошибка печати (lpr): ' + (e instanceof Error ? e.message : String(e)),
-      });
-    }
-  });
-}
-
-// --- ADD THIS HANDLER FOR print-labels ---
-ipcMain.handle(
-  'print-labels',
-  async (_event, options: { labels: string[]; printerName?: string }) => {
-    try {
-      if (!options.labels || !Array.isArray(options.labels) || options.labels.length === 0) {
-        return { success: false, message: 'Нет данных для печати' };
-      }
-      return await printLabelSmart(options);
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Ошибка при печати: ' + (error instanceof Error ? error.message : String(error)),
-      };
-    }
-  }
-);
-
-// Функция проверки доступности принтера
-const testPrinterConnection = (
-  printer: PrinterConfig
-): Promise<{ success: boolean; message: string }> => {
-  return new Promise(resolve => {
-    if (printer.connectionType === 'network') {
-      testNetworkPrinterConnection(printer, resolve);
-    } else {
-      console.error(`[TEST] Неизвестный тип подключения принтера: ${printer.connectionType}`);
-      resolve({
-        success: false,
-        message: `Неизвестный тип подключения принтера: ${printer.connectionType}`,
-      });
-    }
-  });
-};
-
-// Проверка подключения к сетевому принтеру
-const testNetworkPrinterConnection = (
-  printer: PrinterConfig,
-  resolve: (
-    value:
-      | { success: boolean; message: string }
-      | PromiseLike<{ success: boolean; message: string }>
-  ) => void
-) => {
-  console.log(
-    `[TEST] Проверка соединения с сетевым принтером ${printer.name} (${printer.ip}:${printer.port})...`
-  );
-
-  const client = new net.Socket();
-  let connectionSuccessful = false;
-
-  // Устанавливаем таймаут для операции
-  const timeout = setTimeout(() => {
-    if (!connectionSuccessful) {
-      console.log(`[TEST] Таймаут подключения к принтеру ${printer.name}`);
-      client.destroy();
-      resolve({
-        success: false,
-        message: `Не удалось подключиться к принтеру ${printer.name}: превышено время ожидания (3 сек)`,
-      });
-    }
-  }, 3000);
-
-  // Пытаемся установить соединение
-  try {
-    client.connect(printer.port, printer.ip, () => {
-      connectionSuccessful = true;
-      clearTimeout(timeout);
-      console.log(
-        `[TEST] Успешное подключение к принтеру ${printer.name} (${printer.ip}:${printer.port})`
-      );
-
-      // Закрываем соединение
-      client.end();
-      resolve({
-        success: true,
-        message: `Принтер ${printer.name} доступен и готов к печати`,
-      });
-    });
-
-    // Обработка ошибок соединения
-    client.on('error', (error: Error) => {
-      clearTimeout(timeout);
-      console.error(`[TEST] Ошибка подключения к принтеру ${printer.name}: ${error.message}`);
-      client.destroy();
-      resolve({
-        success: false,
-        message: `Не удалось подключиться к принтеру ${printer.name}: ${error.message}`,
-      });
-    });
-  } catch (error) {
-    clearTimeout(timeout);
-    console.error(`[TEST] Исключение при проверке принтера ${printer.name}:`, error);
-    resolve({
-      success: false,
-      message: `Ошибка при проверке принтера ${printer.name}: ${error instanceof Error ? error.message : 'неизвестная ошибка'}`,
-    });
-  }
-};
-
-// === ОКНО ELECTRON ===
+// Переменная для хранения ссылки на окно приложения
 let mainWindow: BrowserWindow | null = null;
 
-function createWindow() {
-  console.log('[MAIN] Создание окна Electron...');
+// Функция для создания основного окна приложения
+const createWindow = (): void => {
+  console.log('Creating main window...');
+  
+  // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1200,
     height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    show: false,
+    width: 1200,
+    show: false, // Не показываем окно сразу
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
       nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
     },
   });
 
+  // Показываем окно только когда оно готово
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-    console.log('[MAIN] Окно готово к отображению.');
+    console.log('Window ready to show');
+    if (mainWindow) {
+      mainWindow.show();
+      
+      // Фокусируем окно на Windows
+      if (process.platform === 'win32') {
+        mainWindow.focus();
+      }
+    }
   });
 
-  // Определяем URL для загрузки (dev или prod)
-  const isDev = process.env.NODE_ENV === 'development' || process.env.VITE_DEV_SERVER_URL;
-  const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173/';
-  const prodUrl = `file://${path.join(__dirname, '../renderer/index.html')}`;
-
-  if (isDev) {
-    mainWindow.loadURL(devUrl);
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-    console.log('[MAIN] Загружен dev-сервер:', devUrl);
+  // Обработка ошибок загрузки
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load page:', errorCode, errorDescription);
+  });  // Load the app content - dev server in development, static files in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (isDevelopment && typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined') {
+    console.log('Loading dev server URL:', MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadURL(prodUrl);
-    console.log('[MAIN] Загружен production build:', prodUrl);
+    // Try multiple possible paths for the index.html file
+    const possiblePaths = [
+      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+      path.join(__dirname, '../renderer/index.html'),
+      path.join(__dirname, '../index.html'),
+      path.join(__dirname, '.vite/renderer/index.html')
+    ];
+    
+    let indexPath: string | null = null;
+    for (const possiblePath of possiblePaths) {
+      console.log('Checking path:', possiblePath);
+      if (fs.existsSync(possiblePath)) {
+        indexPath = possiblePath;
+        console.log('Found index.html at:', indexPath);
+        break;
+      }
+    }
+    
+    if (indexPath) {
+      mainWindow.loadFile(indexPath);
+    } else {
+      console.error('No valid index.html found in any of the expected paths');
+      // Last resort - try to load from renderer directory directly
+      const fallbackPath = path.join(process.resourcesPath, 'app', '.vite', 'renderer', 'index.html');
+      console.log('Trying fallback path:', fallbackPath);
+      if (fs.existsSync(fallbackPath)) {
+        mainWindow.loadFile(fallbackPath);
+      } else {
+        console.error('Fallback path also failed. Cannot load application.');
+      }
+    }
   }
 
+  // Open the DevTools in development mode
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+  }
+
+  // Обработка закрытия окна
   mainWindow.on('closed', () => {
     mainWindow = null;
-    console.log('[MAIN] Окно закрыто.');
   });
-}
+};
 
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  console.log('[MAIN] app.whenReady() — старт приложения');
+  console.log('Electron app is ready');
   createWindow();
-
+  
+  // На macOS нужно создать окно заново при активации
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -563,43 +258,18 @@ app.whenReady().then(() => {
   });
 });
 
+// Обработка before-quit для правильного завершения
+app.on('before-quit', () => {
+  console.log('App is about to quit');
+});
+
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  console.log('All windows closed');
   if (process.platform !== 'darwin') {
     app.quit();
-  }
-});
-
-ipcMain.handle('save-printer-config', async (_event, config: PrinterConfig[]) => {
-  const success = savePrinterConfig(config);
-  if (success) {
-    return { success: true, message: 'Конфигурация принтеров сохранена' };
-  } else {
-    return { success: false, message: 'Ошибка при сохранении конфигурации принтеров' };
-  }
-});
-
-ipcMain.handle('test-printer-connection', async (_event, printer: PrinterConfig) => {
-  try {
-    const result = await testPrinterConnection(printer);
-    return result;
-  } catch (error) {
-    return {
-      success: false,
-      message:
-        'Ошибка при проверке подключения: ' +
-        (error instanceof Error ? error.message : String(error)),
-    };
-  }
-});
-
-// Получить список принтеров (конфиг приложения)
-ipcMain.handle('get-printers', async () => {
-  try {
-    const printers = loadPrinterConfig();
-    return printers;
-  } catch (error) {
-    console.error('[IPC] Ошибка при получении списка принтеров:', error);
-    return [];
   }
 });
 
@@ -620,7 +290,8 @@ async function makeApiRequest(options: ApiRequestOptions) {
       url += `?${queryParams.toString()}`;
     }
 
-    const response = await fetch(url, {
+    // Вместо стандартного fetch используем наш безопасный fetch с поддержкой TLS
+    const response = await secureFetch(url, {
       method: options.method || 'GET',
       headers: apiConfig.headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
@@ -645,12 +316,12 @@ async function makeApiRequest(options: ApiRequestOptions) {
     }
 
     const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
+    return { success: true, data };  } catch (error) {
     console.error('[API] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown API error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      status: 500,
     };
   }
 }
@@ -681,4 +352,339 @@ ipcMain.handle('update-order-status', async (_event, id: string, status: string)
     method: 'PATCH',
     body: { status },
   });
+});
+
+// Обработчик для получения информации о статусе TLS
+ipcMain.handle('get-tls-status', async () => {
+  return getTlsStatus();
+});
+
+// IPC обработчики для принтеров
+ipcMain.handle('get-printers', async () => {
+  console.log('[IPC] Получение списка принтеров');
+  try {
+    return printersList;
+  } catch (error) {
+    console.error('[IPC] Ошибка получения списка принтеров:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('print-labels', async (_event, options: PrintLabelsOptions) => {
+  console.log('[IPC] Печать этикеток:', options);
+  try {
+    // Определяем принтер для печати
+    let printerName = options.printerName;
+    if (!printerName) {
+      // Используем принтер по умолчанию
+      const defaultPrinter = printersList.find(p => p.isDefault);
+      printerName = defaultPrinter?.name;
+    }
+
+    if (!printerName) {
+      console.error('[IPC] Принтер не найден');
+      return false;
+    }
+
+    console.log(`[IPC] Печать на принтере: ${printerName}`);
+    
+    // Обрабатываем этикетки в главном процессе
+    const result = await printLabelsMain(options.labels, printerName);
+    console.log(`[IPC] Результат печати: ${result}`);
+    return result;
+  } catch (error) {
+    console.error('[IPC] Ошибка печати этикеток:', error);
+    return false;
+  }
+});
+
+// Функция печати этикеток в главном процессе
+async function printLabelsMain(labels: string[], printerName: string): Promise<boolean> {
+  try {
+    console.log(`[PRINT-MAIN] Начало печати ${labels.length} этикеток на принтере: ${printerName}`);
+    
+    // Находим конфигурацию принтера
+    const printerConfig = printersList.find(p => p.name === printerName);
+    if (!printerConfig) {
+      console.error(`[PRINT-MAIN] Принтер "${printerName}" не найден в конфигурации`);
+      return false;
+    }
+    
+    // Объединяем все этикетки в один файл ZPL
+    const allLabelsContent = labels.join('\n');
+    console.log(`[PRINT-MAIN] Подготовлен ZPL контент, размер: ${allLabelsContent.length} байт`);
+    
+    // Для ZPL принтеров используем прямую TCP отправку
+    if (printerConfig.connectionType === 'network' && printerConfig.ip && printerConfig.port) {
+      console.log(`[PRINT-MAIN] Отправка ZPL данных на сетевой принтер ${printerConfig.ip}:${printerConfig.port}`);
+      return await sendZplToNetworkPrinter(printerConfig.ip, printerConfig.port, allLabelsContent);
+    }
+    
+    console.error(`[PRINT-MAIN] Неподдерживаемый тип принтера: ${printerConfig.connectionType}`);
+    return false;
+  } catch (error) {
+    console.error('[PRINT-MAIN] Общая ошибка при печати:', error);
+    return false;
+  }
+}
+
+// Функция для отправки ZPL данных на сетевой принтер
+async function sendZplToNetworkPrinter(ip: string, port: number, zplData: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      console.log(`[PRINT-MAIN] Подключение к ZPL принтеру ${ip}:${port}`);
+      
+      const client = new net.Socket();
+      let connected = false;
+      
+      // Обработчик успешного подключения
+      client.connect(port, ip, () => {
+        connected = true;
+        console.log(`[PRINT-MAIN] Подключился к принтеру ${ip}:${port}`);
+        console.log(`[PRINT-MAIN] Отправка ZPL данных (${zplData.length} байт)`);
+        
+        // Отправляем ZPL данные
+        client.write(zplData, 'utf8', (error) => {
+          if (error) {
+            console.error('[PRINT-MAIN] Ошибка отправки ZPL данных:', error);
+            client.destroy();
+            resolve(false);
+          } else {
+            console.log('[PRINT-MAIN] ZPL данные успешно отправлены');
+            client.end();
+          }
+        });
+      });
+      
+      // Обработчик закрытия соединения
+      client.on('close', () => {
+        console.log(`[PRINT-MAIN] Соединение с принтером ${ip}:${port} закрыто`);
+        if (connected) {
+          resolve(true);
+        }
+      });
+      
+      // Обработчик ошибок
+      client.on('error', (err) => {
+        console.error(`[PRINT-MAIN] Ошибка TCP соединения с ${ip}:${port}:`, err.message);
+        client.destroy();
+        resolve(false);
+      });
+      
+      // Таймаут на подключение (10 секунд)
+      setTimeout(() => {
+        if (!connected) {
+          client.destroy();
+          console.error(`[PRINT-MAIN] Таймаут подключения к ${ip}:${port}`);
+          resolve(false);
+        }
+      }, 10000);
+      
+    } catch (error) {
+      console.error('[PRINT-MAIN] Ошибка при отправке ZPL:', error);
+      resolve(false);
+    }
+  });
+}
+
+// IPC обработчик для сохранения конфигурации принтеров
+ipcMain.handle('save-printer-config', async (_event, config: PrinterConfig[]) => {
+  console.log('[IPC] Сохранение конфигурации принтеров');
+  try {
+    const success = savePrinterConfig(config);
+    if (success) {
+      printersList = config; // Обновляем глобальную переменную
+      return { 
+        success: true, 
+        message: 'Конфигурация принтеров сохранена успешно',
+        loadedConfig: config 
+      };
+    } else {
+      return { 
+        success: false, 
+        message: 'Не удалось сохранить конфигурацию принтеров' 
+      };
+    }
+  } catch (error) {
+    console.error('[IPC] Ошибка сохранения конфигурации принтеров:', error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Неизвестная ошибка при сохранении' 
+    };
+  }
+});
+
+// IPC обработчик для тестирования подключения к принтеру
+ipcMain.handle('test-printer-connection', async (_event, printerConfig: PrinterConfig) => {
+  console.log('[IPC] Тестирование подключения к принтеру:', printerConfig.name);
+  try {
+    if (printerConfig.connectionType === 'network' && printerConfig.ip && printerConfig.port) {
+      const result = await testNetworkPrinter(printerConfig.ip, printerConfig.port);
+      return { 
+        success: result.success, 
+        message: result.success ? 'Подключение успешно' : (result.error || 'Ошибка подключения') 
+      };
+    }
+    return { success: false, message: 'Неподдерживаемый тип подключения или отсутствуют параметры' };
+  } catch (error) {
+    console.error('[IPC] Ошибка тестирования принтера:', error);
+    return { success: false, message: error instanceof Error ? error.message : 'Неизвестная ошибка при тестировании' };
+  }
+});
+
+// Функция для тестирования сетевого принтера
+function testNetworkPrinter(ip: string, port: number): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const timeout = 5000; // 5 секунд
+
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve({ success: false, error: 'Timeout: принтер не отвечает' });
+    }, timeout);
+
+    socket.connect(port, ip, () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve({ success: true });
+    });
+
+    socket.on('error', (error) => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve({ success: false, error: error.message });
+    });
+  });
+}
+
+// IPC обработчик для получения USB устройств
+ipcMain.handle('get-usb-devices', async () => {
+  console.log('[IPC] Получение списка USB устройств');
+  try {
+    // Для демонстрации возвращаем пустой список
+    // В реальном приложении здесь можно использовать библиотеку usb или аналогичную
+    return {
+      success: true,
+      devices: [],
+      message: 'USB устройства не поддерживаются в текущей версии'
+    };
+  } catch (error) {
+    console.error('[IPC] Ошибка получения USB устройств:', error);
+    return {
+      success: false,
+      devices: [],
+      message: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+});
+
+// IPC обработчик для получения системных принтеров
+ipcMain.handle('get-system-printers', async () => {
+  console.log('[IPC] Получение системных принтеров');
+  try {
+    // В Node.js нет встроенной поддержки получения системных принтеров
+    // Можно использовать child_process для выполнения системных команд
+    return [];
+  } catch (error) {
+    console.error('[IPC] Ошибка получения системных принтеров:', error);
+    return [];
+  }
+});
+
+// IPC обработчик для печати сырого текста
+ipcMain.handle('print-raw-to-printer', async (_event, printerName: string, rawData: string) => {
+  console.log(`[IPC] Печать сырого текста на принтере: ${printerName}`);
+  try {
+    // Найти принтер в конфигурации
+    const printer = printersList.find(p => p.name === printerName);
+    if (!printer) {
+      console.error(`[IPC] Принтер "${printerName}" не найден в конфигурации`);
+      return false;
+    }
+
+    if (printer.connectionType === 'network' && printer.ip && printer.port) {
+      return await sendRawDataToNetworkPrinter(printer.ip, printer.port, rawData);
+    }
+
+    console.error(`[IPC] Неподдерживаемый тип подключения: ${printer.connectionType}`);
+    return false;
+  } catch (error) {
+    console.error('[IPC] Ошибка печати сырого текста:', error);
+    return false;
+  }
+});
+
+// Функция для отправки сырых данных на сетевой принтер
+function sendRawDataToNetworkPrinter(ip: string, port: number, data: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const timeout = 10000; // 10 секунд
+
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, timeout);
+
+    socket.connect(port, ip, () => {
+      socket.write(data, 'utf8', (error) => {
+        clearTimeout(timer);
+        if (error) {
+          console.error('[PRINT] Ошибка отправки данных:', error);
+          resolve(false);
+        } else {
+          console.log('[PRINT] Данные успешно отправлены на принтер');
+          resolve(true);
+        }
+        socket.destroy();
+      });
+    });
+
+    socket.on('error', (error) => {
+      clearTimeout(timer);
+      console.error('[PRINT] Ошибка подключения к принтеру:', error);
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// IPC обработчики для последовательных портов
+ipcMain.handle('get-serial-ports', async () => {
+  console.log('[IPC] Получение списка последовательных портов');
+  try {
+    // Для демонстрации возвращаем пустой список
+    // В реальном приложении можно использовать библиотеку serialport
+    return [];
+  } catch (error) {
+    console.error('[IPC] Ошибка получения последовательных портов:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('test-serial-port', async () => {
+  console.log('[IPC] Тестирование последовательного порта');
+  try {
+    // Заглушка для тестирования последовательного порта
+    return {
+      success: false,
+      message: 'Последовательные порты не поддерживаются в текущей версии'
+    };
+  } catch (error) {
+    console.error('[IPC] Ошибка тестирования последовательного порта:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+});
+
+ipcMain.handle('get-enhanced-serial-port-info', async () => {
+  console.log('[IPC] Получение расширенной информации о последовательных портах');
+  try {
+    // Заглушка для расширенной информации о портах
+    return [];
+  } catch (error) {
+    console.error('[IPC] Ошибка получения расширенной информации о портах:', error);
+    return [];
+  }
 });

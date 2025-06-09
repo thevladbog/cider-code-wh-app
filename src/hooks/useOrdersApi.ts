@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Order } from '../models/orders';
 import * as API from '../services/api';
+import { useStore } from '../store';
+import { useEffect } from 'react';
 
 // Ключи запросов для кэширования
 export const QUERY_KEYS = {
   allOrders: ['orders'],
   ordersByStatus: (status: string) => ['orders', { status }],
   orderById: (id: string) => ['orders', { id }],
+  tlsStatus: ['tlsStatus'],
 };
 
 /**
@@ -16,14 +19,28 @@ export const QUERY_KEYS = {
  * @param enabled Включить/отключить запрос
  */
 export function useOrders(status?: 'NEW' | 'ARCHIVE', pollingInterval = 30000, enabled = true) {
-  return useQuery(QUERY_KEYS.ordersByStatus(status || 'all'), () => API.fetchOrders(status), {
-    refetchInterval: pollingInterval,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    enabled,
-    staleTime: pollingInterval / 2, // Считаем данные устаревшими через половину интервала
-  });
+  const { fetchTlsStatus } = useStore();
+  
+  return useQuery(
+    QUERY_KEYS.ordersByStatus(status || 'all'), 
+    async () => {
+      // Получаем заказы из API
+      const orders = await API.fetchOrders(status);
+      
+      // После каждого успешного запроса обновляем статус TLS
+      fetchTlsStatus();
+      
+      return orders;
+    }, 
+    {
+      refetchInterval: pollingInterval,
+      refetchIntervalInBackground: false,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      enabled,
+      staleTime: pollingInterval / 2, // Считаем данные устаревшими через половину интервала
+    }
+  );
 }
 
 /**
@@ -31,6 +48,7 @@ export function useOrders(status?: 'NEW' | 'ARCHIVE', pollingInterval = 30000, e
  */
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
+  const { fetchTlsStatus } = useStore();
 
   return useMutation(
     ({ id, status }: { id: string; status: 'NEW' | 'ARCHIVE' }) =>
@@ -99,12 +117,43 @@ export function useUpdateOrderStatus() {
         }
       },
 
-      // После успешной мутации инвалидируем запросы для обновления данных
+      // После мутации инвалидируем запросы для обновления данных и обновляем статус TLS
       onSettled: () => {
         queryClient.invalidateQueries(QUERY_KEYS.allOrders);
         queryClient.invalidateQueries(QUERY_KEYS.ordersByStatus('NEW'));
         queryClient.invalidateQueries(QUERY_KEYS.ordersByStatus('ARCHIVE'));
+        
+        // Обновляем статус TLS после каждой операции с API
+        fetchTlsStatus();
       },
     }
   );
+}
+
+/**
+ * Хук для получения и отслеживания состояния TLS соединения
+ */
+export function useTlsStatus(pollingInterval = 60000) {
+  const { tlsStatus, tlsStatusLoading, tlsStatusError, fetchTlsStatus } = useStore();
+  
+  // Запускаем периодическое обновление статуса TLS
+  useEffect(() => {
+    // Первоначальное получение статуса
+    fetchTlsStatus();
+    
+    // Настраиваем интервал для периодического обновления
+    const intervalId = setInterval(() => {
+      fetchTlsStatus();
+    }, pollingInterval);
+    
+    // Очищаем интервал при размонтировании компонента
+    return () => clearInterval(intervalId);
+  }, [fetchTlsStatus, pollingInterval]);
+  
+  return {
+    tlsStatus,
+    tlsStatusLoading,
+    tlsStatusError,
+    refreshTlsStatus: fetchTlsStatus
+  };
 }

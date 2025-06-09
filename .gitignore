@@ -90,3 +90,15 @@ typings/
 
 # Electron-Forge
 out/
+
+# Security: Never commit certificates or private keys
+certs/
+*.pem
+*.crt
+*.key
+*.p12
+*.pfx
+
+# Environment files with secrets
+.env.local
+.env.production

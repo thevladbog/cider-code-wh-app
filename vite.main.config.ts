@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
-    MAIN_WINDOW_VITE_DEV_SERVER_URL: JSON.stringify('http://localhost:5173/'),
+    // Only define dev server URL in development mode
+    MAIN_WINDOW_VITE_DEV_SERVER_URL: mode === 'development' 
+      ? JSON.stringify('http://localhost:5173/') 
+      : 'undefined',
     MAIN_WINDOW_VITE_NAME: JSON.stringify('main_window'),
   },
   build: {
@@ -12,4 +15,4 @@ export default defineConfig({
     minify: process.env.MODE !== 'development',
     sourcemap: process.env.MODE === 'development',
   },
-});
+}));

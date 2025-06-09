@@ -1,0 +1,15 @@
+{
+  "lastConnection": "2025-06-09T00:32:24.357Z",
+  "lastError": null,
+  "certificateInfo": {
+    "valid": false,
+    "expiration": null,
+    "issuer": null,
+    "domain": null
+  },
+  "connections": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0
+  }
+}

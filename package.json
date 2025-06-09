@@ -1,7 +1,7 @@
 {
   "name": "bottle-code-wh-app",
   "productName": "bottle-code-wh-app",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -18,7 +18,6 @@
     "lint:fix": "eslint --ext .ts,.tsx . --fix",
     "build": "vite build && electron-forge make",
     "run-app": "powershell -File .\\run-dev.ps1",
-    "version:update": "node -e \"import('./scripts/version.js').then(m => m.default())\"",
     "build:beta": "node ./scripts/version.cjs && npm run build",
     "build:release": "node ./scripts/version.cjs && npm run build",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
@@ -35,7 +34,13 @@
     "test:models": "vitest run tests/models",
     "test:store": "vitest run tests/store",
     "test:utils": "vitest run tests/utils",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration",
+    "certs:generate-dev": "node scripts/generate-dev-certs.cjs",
+    "certs:generate-letsencrypt": "node scripts/generate-letsencrypt-http.cjs",
+    "certs:renew": "node scripts/renew-certificates.cjs",
+    "certs:setup-auto-renewal": "node scripts/setup-auto-renewal.cjs",
+    "certs:load-local": "set SECRET_PROVIDER=local && node scripts/load-certificates.cjs",
+    "certs:load-letsencrypt": "set SECRET_PROVIDER=letsencrypt && node scripts/load-certificates.cjs"
   },
   "keywords": [],
   "author": {
@@ -60,6 +65,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^22.15.30",
+    "@types/node-forge": "^1.3.11",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
@@ -89,6 +95,8 @@
     "date-fns": "^4.1.0",
     "electron-squirrel-startup": "^1.0.1",
     "heroicons": "^2.2.0",
+    "node-fetch": "^3.3.2",
+    "node-forge": "^1.3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zustand": "^4.3.0"

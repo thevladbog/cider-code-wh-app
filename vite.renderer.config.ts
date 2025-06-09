@@ -13,11 +13,18 @@ export default defineConfig({
       input: {
         main_window: 'index.html',
       },
+      external: ['electron'],
     },
   },
   plugins: [react()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
+  },
+  define: {
+    global: 'globalThis',
+    __dirname: 'undefined',
+    __filename: 'undefined',
+    process: { env: {} },
   },
   server: {
     host: '127.0.0.1',
@@ -26,6 +33,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'zustand', '@tanstack/react-query'],
+    exclude: ['electron'],
   },
   css: {
     postcss: {

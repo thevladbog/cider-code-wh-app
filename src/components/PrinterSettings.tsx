@@ -1,14 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-import { testPrinterConnection } from '../utils/print';
-
-interface PrinterConfig {
-  name: string;
-  connectionType: 'network';
-  ip: string;
-  port: number;
-  isDefault?: boolean;
-}
+import { testPrinterConnection, PrinterConfig } from '../utils/print';
 
 interface PrinterSettingsProps {
   isOpen: boolean;
@@ -53,12 +45,12 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
         const printersFromFile = await window.electronAPI.getPrinters();
         setPrinters(
           (printersFromFile || [])
-            .filter((p: { connectionType: string }) => p.connectionType === 'network')
-            .map((p: { name: string; ip: string; port: number; isDefault?: boolean }) => ({
+            .filter((p) => p.connectionType === 'network' && p.ip && p.port)
+            .map((p): PrinterConfig => ({
               name: p.name,
-              connectionType: 'network',
-              ip: p.ip,
-              port: p.port,
+              connectionType: 'network' as const,
+              ip: p.ip || '',
+              port: p.port || 9100,
               isDefault: p.isDefault,
             }))
         );
@@ -66,13 +58,14 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
         const storedPrinters = localStorage.getItem('printers');
         if (storedPrinters) {
           const parsedPrinters = JSON.parse(storedPrinters)
-            .filter((p: { connectionType: string }) => p.connectionType === 'network')
-            .map((p: { name: string; ip: string; port: number; isDefault?: boolean }) => ({
+            .filter((p: { connectionType: string; ip?: string; port?: number }) => 
+              p.connectionType === 'network' && p.ip && p.port)
+            .map((p: { name: string; ip: string; port: number; isDefault?: boolean }): PrinterConfig => ({
               name: p.name,
-              connectionType: 'network',
+              connectionType: 'network' as const,
               ip: p.ip,
               port: p.port,
-              isDefault: p.isDefault,
+              isDefault: p.isDefault ?? false,
             }));
           setPrinters(parsedPrinters);
         }
@@ -180,9 +173,9 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-30 flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center" onClick={onClose}>
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
           <div className="bg-white dark:bg-gray-800 px-6 pt-6 pb-4 sm:p-8 sm:pb-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">

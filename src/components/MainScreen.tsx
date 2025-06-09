@@ -1,9 +1,10 @@
 import React from 'react';
 import { useStore } from '../store';
-import { CalendarIcon, ArchiveBoxIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ArchiveBoxIcon, ArrowPathIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useWindowSize } from '../hooks/useWindowSize';
 import ModalOrderSearch from './ModalOrderSearch';
 import { useOrders } from '../hooks/useOrdersApi';
+import CertificateManager from './CertificateManager';
 
 const MainScreen: React.FC = () => {
   const { setSelectedOrder, showArchive, toggleArchiveView } = useStore();
@@ -30,6 +31,9 @@ const MainScreen: React.FC = () => {
   // Определяем текущее состояние загрузки и ошибок
   const isLoading = showArchive ? isLoadingArchive : isLoadingActive;
   const error = showArchive ? errorArchive : errorActive;
+
+  // Состояние для переключения вкладок
+  const [activeTab, setActiveTab] = React.useState<'orders' | 'certificates'>('orders');
 
   // Функция для обновления текущего списка
   const refetch = () => {
@@ -60,69 +64,104 @@ const MainScreen: React.FC = () => {
   }, [orderToReprint, archivedOrders, orders, setSelectedOrder]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors dark:bg-fixed">
-      {/* Заголовок */}
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gradient-to-b dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors dark:bg-fixed">
+      {/* Заголовок с вкладками */}
       <header className="bg-blue-500 dark:bg-blue-700 text-white p-4 shadow-md transition-colors">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Заказы на складе</h1>
-          <div className="flex space-x-3">
-            <button
-              onClick={toggleArchiveView}
-              className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
-              style={{ minWidth: '44px', minHeight: '44px' }}
-            >
-              {showArchive ? (
-                <>
-                  <ArrowPathIcon className="h-6 w-6 mr-1" />
-                  <span className="hidden sm:inline">Новые</span>
-                </>
-              ) : (
-                <>
-                  <ArchiveBoxIcon className="h-6 w-6 mr-1" />
-                  <span className="hidden sm:inline">Архив</span>
-                </>
-              )}
-            </button>{' '}
-            <button
-              onClick={() => refetch()}
-              className="bg-green-600 hover:bg-green-700 active:bg-green-800 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
-              style={{ minWidth: '44px', minHeight: '44px' }}
-            >
-              <ArrowPathIcon className="h-6 w-6 mr-1" />
-              <span className="hidden sm:inline">Обновить</span>
-            </button>
-            <button
-              onClick={() =>
-                showArchive ? setShowOrderSearch(true) : setShowActiveOrderSearch(true)
-              }
-              className="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
-              style={{ minWidth: '44px', minHeight: '44px' }}
-            >
-              <span className="font-bold text-lg mr-2">Печать по №</span>
-              <span className="hidden sm:inline">🔍</span>
-            </button>
+          <div className="flex items-center space-x-4">
+            {/* Вкладки для навигации */}
+            <div className="flex bg-blue-600 dark:bg-blue-800 rounded-lg overflow-hidden shadow-sm">
+              <button 
+                onClick={() => setActiveTab('orders')}
+                className={`px-4 py-2 ${
+                  activeTab === 'orders' 
+                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium' 
+                    : 'text-white hover:bg-blue-700 dark:hover:bg-blue-850'
+                } transition-colors flex items-center space-x-2`}
+              >
+                <ArchiveBoxIcon className="h-5 w-5" />
+                <span>Заказы</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('certificates')}
+                className={`px-4 py-2 ${
+                  activeTab === 'certificates' 
+                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium' 
+                    : 'text-white hover:bg-blue-700 dark:hover:bg-blue-850'
+                } transition-colors flex items-center space-x-2`}
+              >
+                <ShieldCheckIcon className="h-5 w-5" />
+                <span>Сертификаты</span>
+              </button>
+            </div>
           </div>
+          
+          {activeTab === 'orders' && (
+            <div className="flex space-x-3">
+              <button
+                onClick={toggleArchiveView}
+                className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                {showArchive ? (
+                  <>
+                    <ArrowPathIcon className="h-6 w-6 mr-1" />
+                    <span className="hidden sm:inline">Новые</span>
+                  </>
+                ) : (
+                  <>
+                    <ArchiveBoxIcon className="h-6 w-6 mr-1" />
+                    <span className="hidden sm:inline">Архив</span>
+                  </>
+                )}
+              </button>{' '}
+              <button
+                onClick={() => refetch()}
+                className="bg-green-600 hover:bg-green-700 active:bg-green-800 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <ArrowPathIcon className="h-6 w-6 mr-1" />
+                <span className="hidden sm:inline">Обновить</span>
+              </button>
+              <button
+                onClick={() =>
+                  showArchive ? setShowOrderSearch(true) : setShowActiveOrderSearch(true)
+                }
+                className="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 p-3 rounded-lg text-white shadow-md flex items-center touch-manipulation"
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <span className="font-bold text-lg mr-2">Печать по №</span>
+                <span className="hidden sm:inline">🔍</span>
+              </button>
+            </div>
+          )}
         </div>
-        <p className="text-sm mt-2">{showArchive ? 'Архив заказов' : 'Активные заказы'}</p>
+        
+        {activeTab === 'orders' && (
+          <p className="text-sm mt-2">{showArchive ? 'Архив заказов' : 'Активные заказы'}</p>
+        )}
       </header>
+      
       {/* Основной контент */}
       <main className="flex-grow p-4 overflow-y-auto">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center text-red-500 p-4">Ошибка загрузки заказов</div>
-        ) : displayedOrders.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 p-4">
-            {showArchive ? 'Архив пуст' : 'Нет активных заказов'}
-          </div>
-        ) : (
-          <div
-            className={`grid gap-4 ${
-              isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-2' : 'grid-cols-3'
-            }`}
-          >
+        {activeTab === 'orders' ? (
+          // Контент для вкладки заказов
+          isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 p-4">Ошибка загрузки заказов</div>
+          ) : displayedOrders.length === 0 ? (
+            <div className="text-center text-gray-500 dark:text-gray-400 p-4">
+              {showArchive ? 'Архив пуст' : 'Нет активных заказов'}
+            </div>
+          ) : (
+            <div
+              className={`grid gap-4 ${
+                isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-3' : 'grid-cols-4'
+              }`}
+            >
             {displayedOrders.map(order => (
               <div
                 key={order.id}
@@ -162,7 +201,9 @@ const MainScreen: React.FC = () => {
                   </div>
                   <div className="mt-2 text-gray-600 dark:text-gray-300">
                     <p className="truncate text-sm">Получатель: {order.consignee}</p>
-                    <p className="truncate text-sm">Адрес: {order.address}</p>
+                    <p className="text-sm leading-tight" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                      Адрес: {order.address.replace(/,\s*/g, ',\n')}
+                    </p>
                   </div>
                   {!showArchive && (
                     <div className="mt-3 text-blue-600 dark:text-blue-400 text-sm font-medium flex items-center">
@@ -189,8 +230,12 @@ const MainScreen: React.FC = () => {
               </div>
             ))}
           </div>
+        )
+        ) : (
+          // Компонент управления сертификатами
+          <CertificateManager />
         )}
-      </main>{' '}
+      </main>
       <ModalOrderSearch
         isOpen={showOrderSearch}
         onClose={() => setShowOrderSearch(false)}

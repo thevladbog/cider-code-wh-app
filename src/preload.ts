@@ -99,6 +99,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getEnhancedSerialPortInfo: (): Promise<SerialPortInfo[]> => {
     return ipcRenderer.invoke('get-enhanced-serial-port-info');
   },
+  
+  // Получить информацию о статусе TLS соединения
+  getTlsStatus: () => {
+    return ipcRenderer.invoke('get-tls-status');
+  },
   // API методы (обход CORS)
   fetchOrders: (
     status?: string
@@ -133,4 +138,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }> => {
     return ipcRenderer.invoke('update-order-status', id, status);
   },
+
+  // Certificate management methods
+  getCertificateInfo: async () => {
+    return await ipcRenderer.invoke('certificate:info');
+  },
+
+  checkAndUpdateCertificates: async (autoUpdate = false, updateSource = 'auto') => {
+    return await ipcRenderer.invoke('certificate:check-and-update', autoUpdate, updateSource);
+  },
+
+  uploadCertificate: async (certificatePath: string, keyPath: string) => {
+    return await ipcRenderer.invoke('certificate:upload', certificatePath, keyPath);
+  },
+
+  startCertificateMonitoring: async () => {
+    return await ipcRenderer.invoke('certificate:start-monitoring');
+  }
 });

@@ -19,6 +19,9 @@ export function getApiConfig(): ApiConfig {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      // Добавляем заголовки для поддержки TLS
+      'X-TLS-Verify': '1',
+      'X-Client-Cert-Present': '1',
     },
   };
 }

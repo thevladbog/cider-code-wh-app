@@ -1,27 +1,59 @@
-name: Build and Release Electron App
+name: Release Pipeline
 
 on:
   push:
     branches:
       - 'release-stable'
       - 'release-beta'
+    tags:
+      - 'v*'
 
 jobs:
-  build-and-release:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.semver.outputs.version }}
+      release_type: ${{ steps.branch-check.outputs.release_type }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Determine release type
+        id: branch-check
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/release-stable" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "release_type=stable" >> $GITHUB_OUTPUT
+          else
+            echo "release_type=beta" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate semantic version
+        id: semver
+        uses: paulhatch/semantic-version@v5.4.0
+        with:
+          branch: ${{ github.ref }}
+          tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
+          version_format: "${major}.${minor}.${patch}${{ steps.branch-check.outputs.release_type == 'beta' && '-beta.${increment}' || '' }}"
+          bump_each_commit: true
+
+  build:
+    needs: version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
       
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '22.x'
           cache: 'npm'
           
       - name: Install Linux dependencies
@@ -33,86 +65,94 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Determine build type
-        id: build-type
+      - name: Generate development certificates for beta
+        if: needs.version.outputs.release_type == 'beta'
         run: |
-          BRANCH_NAME="${{ github.ref }}"
-          if [[ $BRANCH_NAME == "refs/heads/release-stable" ]]; then
-            echo "BUILD_TYPE=release" >> $GITHUB_OUTPUT
-          else
-            echo "BUILD_TYPE=beta" >> $GITHUB_OUTPUT
-          fi
+          echo "Generating development certificates for beta build..."
+          node scripts/generate-dev-certs.cjs        env:
+          DOMAIN_NAME: localhost
       
-      - name: Build application
-        run: npm run build:${{ steps.build-type.outputs.BUILD_TYPE }}
+      - name: Note about production certificates
+        if: needs.version.outputs.release_type == 'stable'
+        run: |
+          echo "⚠️  Production certificates must be provided on the deployment server"
+          echo "🔒 Certificates are not stored in Git repository for security"
+          echo "💡 Ensure certificates are available in /certs/ directory on production server"
+          echo "📋 Use scripts/generate-letsencrypt-http.cjs on production server for Let's Encrypt"
+      
+      - name: Build and make application
+        run: npm run make
         
-      - name: Extract version from package.json
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1
-      
       - name: Upload Windows artifacts
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: windows-artifacts
+          name: windows-release-${{ needs.version.outputs.new_version }}
           path: |
             out/make/squirrel.windows/x64/*.exe
             out/make/zip/win32/x64/*.zip
-          
+          retention-days: 30
+            
       - name: Upload Linux artifacts
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: linux-artifacts
+          name: linux-release-${{ needs.version.outputs.new_version }}
           path: |
             out/make/deb/x64/*.deb
             out/make/rpm/x64/*.rpm
             out/make/zip/linux/x64/*.zip
-          
+          retention-days: 30
+            
       - name: Upload macOS artifacts
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: macos-artifacts
+          name: macos-release-${{ needs.version.outputs.new_version }}
           path: |
+            out/make/dmg/x64/*.dmg
             out/make/zip/darwin/x64/*.zip
-  
-  create-release:
-    needs: build-and-release
+          retention-days: 30
+
+  release:
+    needs: [version, build]
     runs-on: ubuntu-latest
+    if: needs.version.outputs.release_type == 'stable'
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v3
-        
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         
-      - name: Extract version from package.json
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1
-        
-      - name: Determine release type
-        id: release-type
-        run: |
-          BRANCH_NAME="${{ github.ref }}"
-          VERSION="${{ steps.package-version.outputs.current-version }}"
-          if [[ $BRANCH_NAME == "refs/heads/release-stable" ]]; then
-            echo "RELEASE_TYPE=stable" >> $GITHUB_OUTPUT
-            echo "PRERELEASE=false" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=Release v$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "RELEASE_TYPE=beta" >> $GITHUB_OUTPUT
-            echo "PRERELEASE=true" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=Beta v$VERSION" >> $GITHUB_OUTPUT
-          fi
-          
-      - name: Create Release and Tag
-        uses: ncipollo/release-action@v1
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag: v${{ steps.package-version.outputs.current-version }}
-          name: ${{ steps.release-type.outputs.RELEASE_NAME }}
-          artifacts: "*-artifacts/**/*"
+          tag_name: v${{ needs.version.outputs.new_version }}
+          name: Release v${{ needs.version.outputs.new_version }}
           draft: false
-          prerelease: ${{ steps.release-type.outputs.PRERELEASE == 'true' }}
-          generateReleaseNotes: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: false
+          body: |
+            ## Release Notes
+            
+            ### 🚀 New Version: v${{ needs.version.outputs.new_version }}
+            
+            ### 📦 Downloads
+            - **Windows**: .exe installer and .zip archive
+            - **Linux**: .deb and .rpm packages + .zip archive  
+            - **macOS**: .dmg installer and .zip archive
+            
+            ### 🔒 Security Note
+            This build requires TLS certificates to be configured on the deployment server.
+            Certificates are not included in the release for security reasons.
+            
+            ### 📋 Installation Notes
+            1. Download the appropriate package for your platform
+            2. Install the application
+            3. Configure TLS certificates using the provided scripts
+            4. Run the application
+            
+            For certificate setup, see documentation in the repository.
+          files: |
+            windows-release-${{ needs.version.outputs.new_version }}/**/*
+            linux-release-${{ needs.version.outputs.new_version }}/**/*
+            macos-release-${{ needs.version.outputs.new_version }}/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

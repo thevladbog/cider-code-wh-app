@@ -14,6 +14,26 @@ import {
 
 // Интерфейс для типизации Electron API
 interface ElectronAPI {
+  // API-related methods (защищенные TLS запросы через основной процесс)
+  fetchOrders: (status?: string) => Promise<{
+    success: boolean;
+    data?: Order[];
+    error?: string;
+    status?: number;
+  }>;
+  archiveOrder: (id: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+    status?: number;
+  }>;
+  updateOrderStatus: (id: string, status: string) => Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+    status?: number;
+  }>;
+
   // Printer-related methods
   printLabels: (options: { labels: string[]; printerName?: string }) => Promise<boolean>;
   getPrinters: () => Promise<
@@ -56,31 +76,6 @@ interface ElectronAPI {
     printerName: string,
     rawData: string
   ) => Promise<{ success: boolean; message: string }>;
-
-  // API methods to bypass CORS
-  fetchOrders: (status?: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-    status?: number;
-  }>;
-
-  archiveOrder: (id: string) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-    status?: number;
-  }>;
-
-  updateOrderStatus: (
-    id: string,
-    status: string
-  ) => Promise<{
-    success: boolean;
-    data?: unknown;
-    error?: string;
-    status?: number;
-  }>;
 }
 
 // Функция для обработки ошибок API
