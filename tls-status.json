@@ -1,5 +1,5 @@
 {
-  "lastConnection": "2025-06-09T12:21:11.041Z",
+  "lastConnection": "2025-06-09T21:40:02.972Z",
   "lastError": null,
   "certificateInfo": {
     "valid": true,
@@ -8,8 +8,8 @@
     "domain": "wh.ra.bottlecode.app"
   },
   "connections": {
-    "total": 4,
-    "successful": 4,
+    "total": 55,
+    "successful": 55,
     "failed": 0
   }
 }

@@ -8,8 +8,38 @@ body {
   padding: 0;
   width: 100%;
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden; /* Keep the main body overflow hidden */
   touch-action: manipulation;
+}
+
+/* Fix for scrolling containers */
+.overflow-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  max-height: 100%;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* Firefox */
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Show scrollbar only on hover */
+.show-scrollbar-on-hover {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+
+.show-scrollbar-on-hover:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 /* Улучшаем стили фокуса для доступности */
@@ -70,16 +100,18 @@ button:focus-visible {
 
   /* Стиль для модального окна */
   .modal {
-    @apply rounded-xl shadow-xl p-6 w-full max-w-lg bg-white dark:bg-gray-800 transition-colors;
-    max-height: 90vh;
-    overflow-y: auto;
+    @apply rounded-xl shadow-xl w-full max-w-lg bg-white dark:bg-gray-800 transition-colors;
+    max-height: calc(100vh - 4rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Предотвращаем общий скроллинг модального окна */
     -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
   }
 
   /* Стиль для кнопок виртуальной клавиатуры с улучшенной реакцией на нажатие */
   .numpad-button {
     @apply rounded-xl text-2xl font-bold flex items-center justify-center bg-gray-100 dark:bg-gray-700 dark:text-white shadow-sm transition-colors;
-    height: 64px; /* Фиксированная высота для улучшенного взаимодействия */
+    height: 56px; /* Немного уменьшаем высоту для более компактного вида */
     touch-action: manipulation; /* Улучшает реакцию на нажатие */
     user-select: none; /* Предотвращает выделение текста */
     -webkit-tap-highlight-color: transparent; /* Убирает подсветку при нажатии на iOS */

@@ -185,15 +185,15 @@ const PrinterSettings: React.FC<PrinterSettingsProps> = ({ isOpen, onClose }) =>
 
   return (
     <div
-      className="fixed inset-0 z-[9999] overflow-y-auto bg-gray-900 bg-opacity-50 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-gray-900 bg-opacity-50 flex items-center justify-center"
       onClick={onClose}
     >
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0 max-h-[100vh] show-scrollbar-on-hover">
         <div
-          className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full"
+          className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full"
           onClick={e => e.stopPropagation()}
         >
-          <div className="bg-white dark:bg-gray-800 px-6 pt-6 pb-4 sm:p-8 sm:pb-4">
+          <div className="bg-white dark:bg-gray-800 px-6 pt-6 pb-4 sm:p-8 sm:pb-4 max-h-[70vh] overflow-y-auto show-scrollbar-on-hover">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                 Настройки принтеров

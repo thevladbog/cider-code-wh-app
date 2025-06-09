@@ -103,7 +103,7 @@ const WindowTestPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto h-[calc(100vh-2rem)] overflow-y-auto show-scrollbar-on-hover">
       <h1 className="text-2xl font-bold mb-6 text-center">🪟 Тестирование управления окном</h1>
 
       {/* Текущее состояние */}
@@ -221,7 +221,7 @@ const WindowTestPage: React.FC = () => {
             Очистить
           </button>
         </div>
-        <div className="h-64 overflow-y-auto space-y-1">
+        <div className="h-64 overflow-y-auto show-scrollbar-on-hover space-y-1">
           {testLog.length === 0 ? (
             <div className="text-gray-500">Лог пуст...</div>
           ) : (

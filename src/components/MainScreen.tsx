@@ -149,7 +149,7 @@ const MainScreen: React.FC = () => {
       </header>
 
       {/* Основной контент */}
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 pb-20 overflow-y-auto max-h-[calc(100vh-4rem)] show-scrollbar-on-hover">
         {/* Демонстрация управления окном - только в development режиме */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mb-6">
@@ -171,7 +171,7 @@ const MainScreen: React.FC = () => {
             </div>
           ) : (
             <div
-              className={`grid gap-4 ${
+              className={`grid gap-4 pb-10 ${
                 isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-3' : 'grid-cols-4'
               }`}
             >
@@ -179,7 +179,7 @@ const MainScreen: React.FC = () => {
                 <div
                   key={order.id}
                   className={`
-                  p-4 rounded-xl shadow-md border-2 relative overflow-hidden
+                  p-4 rounded-xl shadow-md border-2 relative overflow-hidden mb-4
                   ${!showArchive ? 'cursor-pointer active:bg-blue-50 dark:active:bg-blue-900 touch-manipulation' : ''} 
                   ${
                     !showArchive
