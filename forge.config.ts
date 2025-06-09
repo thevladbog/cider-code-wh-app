@@ -34,7 +34,7 @@ if (fs.existsSync(certsPath) && !process.env.CI) {
 const config: ForgeConfig = {
   packagerConfig: {
     asar: {
-      unpack: '**/node_modules/{usb,@serialport,serialport,electron-squirrel-startup}/**/*'
+      unpack: '**/node_modules/{electron-squirrel-startup}/**/*'
     },
     // Conditionally add certs as extra resources if they exist
     ...(extraResources.length > 0 && { extraResource: extraResources }),
@@ -42,21 +42,21 @@ const config: ForgeConfig = {
     icon: './src/assets/logo',
     // Настройки для Windows
     win32metadata: {
-      CompanyName: 'Your Company',
-      ProductName: 'Cider Code WH App',
+      CompanyName: 'v-b.tech',
+      ProductName: 'Bottle CODE WH App',
       FileDescription: 'Warehouse Management Application',
-      OriginalFilename: 'cider-code-wh-app.exe'
+      OriginalFilename: 'bottle-code-wh-app.exe'
     }
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      setupExe: 'cider-code-wh-app-setup.exe',
+      setupExe: 'bottle-code-wh-app-setup.exe',
       noMsi: true
     }), 
     new MakerZIP({}, ['darwin']), 
     new MakerDMG({
-      name: 'Cider Code WH App'
+      name: 'Bottle Code WH App'
     }, ['darwin']),
     new MakerRpm({}), 
     new MakerDeb({})

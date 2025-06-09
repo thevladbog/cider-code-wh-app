@@ -40,6 +40,16 @@ jobs:
           version_format: "${major}.${minor}.${patch}${{ steps.branch-check.outputs.release_type == 'beta' && '-beta.${increment}' || '' }}"
           bump_each_commit: true
           
+      - name: Verify notification script exists
+        run: |
+          if [ ! -f "scripts/notify-telegram.cjs" ]; then
+            echo "ERROR: scripts/notify-telegram.cjs not found!"
+            ls -la scripts/
+            exit 1
+          fi
+          chmod +x scripts/notify-telegram.cjs
+          echo "✅ Notification script found and made executable"
+          
       - name: Send build started notification
         run: node scripts/notify-telegram.cjs start
         env:
@@ -208,6 +218,17 @@ jobs:
             out/make/**/*.zip
           retention-days: 30
           
+      - name: Verify notification script exists
+        if: failure()
+        run: |
+          if [ ! -f "scripts/notify-telegram.cjs" ]; then
+            echo "ERROR: scripts/notify-telegram.cjs not found!"
+            ls -la scripts/
+            exit 1
+          fi
+          chmod +x scripts/notify-telegram.cjs
+          echo "✅ Notification script found and made executable"
+          
       - name: Send error notification
         if: failure()
         run: node scripts/notify-telegram.cjs error
@@ -230,7 +251,19 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       
+      - name: Verify notification script exists
+        run: |
+          if [ ! -f "scripts/notify-telegram.cjs" ]; then
+            echo "ERROR: scripts/notify-telegram.cjs not found!"
+            ls -la scripts/
+            exit 1
+          fi
+          chmod +x scripts/notify-telegram.cjs
+          echo "✅ Notification script found and made executable"
+          
       - name: Send beta success notification
         if: success()
         run: node scripts/notify-telegram.cjs success
@@ -253,6 +286,11 @@ jobs:
       contents: write # This permission is required to create releases
     if: needs.version.outputs.release_type == 'stable'
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         
@@ -305,6 +343,16 @@ jobs:
             secure-certificates-${{ needs.version.outputs.new_version }}/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Verify notification script exists
+        run: |
+          if [ ! -f "scripts/notify-telegram.cjs" ]; then
+            echo "ERROR: scripts/notify-telegram.cjs not found!"
+            ls -la scripts/
+            exit 1
+          fi
+          chmod +x scripts/notify-telegram.cjs
+          echo "✅ Notification script found and made executable"
           
       - name: Send success notification for stable release
         if: success()
