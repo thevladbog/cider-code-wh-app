@@ -5,11 +5,13 @@ import {
   ArchiveBoxIcon,
   ArrowPathIcon,
   ShieldCheckIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import { useWindowSize } from '../hooks/useWindowSize';
 import ModalOrderSearch from './ModalOrderSearch';
 import { useOrders } from '../hooks/useOrdersApi';
 import CertificateManager from './CertificateManager';
+import UpdateManager from './UpdateManager';
 import WindowDemo from './WindowDemo';
 
 const MainScreen: React.FC = () => {
@@ -39,7 +41,7 @@ const MainScreen: React.FC = () => {
   const error = showArchive ? errorArchive : errorActive;
 
   // Состояние для переключения вкладок
-  const [activeTab, setActiveTab] = React.useState<'orders' | 'certificates'>('orders');
+  const [activeTab, setActiveTab] = React.useState<'orders' | 'certificates' | 'updates'>('orders');
 
   // Функция для обновления текущего списка
   const refetch = () => {
@@ -99,6 +101,17 @@ const MainScreen: React.FC = () => {
                 <ShieldCheckIcon className="h-5 w-5" />
                 <span>Сертификаты</span>
               </button>
+              <button
+                onClick={() => setActiveTab('updates')}
+                className={`px-4 py-2 ${
+                  activeTab === 'updates'
+                    ? 'bg-blue-800 dark:bg-blue-900 text-white font-medium'
+                    : 'text-white hover:bg-blue-700 dark:hover:bg-blue-850'
+                } transition-colors flex items-center space-x-2`}
+              >
+                <ArrowDownTrayIcon className="h-5 w-5" />
+                <span>Обновления</span>
+              </button>
             </div>
           </div>
 
@@ -149,7 +162,7 @@ const MainScreen: React.FC = () => {
       </header>
 
       {/* Основной контент */}
-      <main className="flex-grow p-4 overflow-y-auto">
+      <main className="flex-grow p-4 pb-20 overflow-y-auto max-h-[calc(100vh-4rem)] show-scrollbar-on-hover">
         {/* Демонстрация управления окном - только в development режиме */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mb-6">
@@ -157,7 +170,12 @@ const MainScreen: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'orders' ? (
+        {activeTab === 'updates' ? (
+          // Компонент управления обновлениями
+          <div className="max-w-lg mx-auto px-4 py-8">
+            <UpdateManager />
+          </div>
+        ) : activeTab === 'orders' ? (
           // Контент для вкладки заказов
           isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -171,7 +189,7 @@ const MainScreen: React.FC = () => {
             </div>
           ) : (
             <div
-              className={`grid gap-4 ${
+              className={`grid gap-4 pb-10 ${
                 isMobile ? 'grid-cols-1' : isTablet ? 'grid-cols-3' : 'grid-cols-4'
               }`}
             >
@@ -179,7 +197,7 @@ const MainScreen: React.FC = () => {
                 <div
                   key={order.id}
                   className={`
-                  p-4 rounded-xl shadow-md border-2 relative overflow-hidden
+                  p-4 rounded-xl shadow-md border-2 relative overflow-hidden mb-4
                   ${!showArchive ? 'cursor-pointer active:bg-blue-50 dark:active:bg-blue-900 touch-manipulation' : ''} 
                   ${
                     !showArchive

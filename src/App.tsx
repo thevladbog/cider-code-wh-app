@@ -27,7 +27,7 @@ const App: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="app min-h-screen transition-colors dark:bg-gray-900 dark:text-white">
+      <div className="app min-h-screen transition-colors dark:bg-gray-900 dark:text-white flex flex-col">
         {/* Шапка приложения с элементами управления окном */}
         <TitleBar title="Система управления заказами">
           <ConnectionStatus />
@@ -62,7 +62,9 @@ const App: React.FC = () => {
         </TitleBar>
 
         {/* Основной контент */}
-        <div className="pt-0">{isTestPageOpen ? <WindowTestPage /> : <MainScreen />}</div>
+        <div className="pt-0 flex-1 overflow-hidden">
+          {isTestPageOpen ? <WindowTestPage /> : <MainScreen />}
+        </div>
 
         {/* Модальные окна и компоненты */}
         <Modal />

@@ -1,14 +1,23 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// Получаем текущую среду из переменной окружения или используем development по умолчанию
+// Избегаем значения "local", которое конфликтует с Vite
+let mode = process.env.NODE_ENV || 'development';
+if (mode === 'local') {
+  mode = 'development';
+}
+console.log(`Building with NODE_ENV: ${mode}`);
+
 // https://vitejs.dev/config
 export default defineConfig({
+  mode,
   base: './',
   build: {
     outDir: '.vite/renderer',
     assetsDir: '.',
-    minify: process.env.MODE !== 'development',
-    sourcemap: process.env.MODE === 'development',
+    minify: process.env.NODE_ENV !== 'development',
+    sourcemap: process.env.NODE_ENV === 'development',
     rollupOptions: {
       input: {
         main_window: 'index.html',
@@ -19,12 +28,11 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-  },
-  define: {
+  },  define: {
     global: 'globalThis',
     __dirname: 'undefined',
     __filename: 'undefined',
-    process: { env: {} },
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
   },
   server: {
     host: '127.0.0.1',

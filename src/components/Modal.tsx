@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { XMarkIcon, PrinterIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline';
+import {
+  XMarkIcon,
+  PrinterIcon,
+  ArchiveBoxIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/outline';
 import { printLabels } from '../utils/print';
 import { useUpdateOrderStatus } from '../hooks/useOrdersApi';
+import OrderInfoPanel from './OrderInfoPanel';
 
 const Modal: React.FC = () => {
   const { selectedOrder, setSelectedOrder } = useStore();
   const [transportUnits, setTransportUnits] = useState<number>(0);
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
+  const [showInfoPanel, setShowInfoPanel] = useState<boolean>(false);
   const modalRef = React.useRef<HTMLDivElement>(null);
   // Используем хук для обновления статуса заказа
   const { mutateAsync: updateStatus } = useUpdateOrderStatus();
@@ -213,145 +220,188 @@ const Modal: React.FC = () => {
   };
 
   return (
-    <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
-      <div
-        ref={modalRef}
-        className="modal dark:bg-gray-800 dark:text-white bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        onClick={e => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-        tabIndex={0} // Позволяет элементу получать фокус и события клавиатуры
-        style={{
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        }}
-      >
-        <div className="flex justify-between items-start mb-4">
-          <h2 className="text-xl font-bold dark:text-white">Заказ #{selectedOrder.orderNumber}</h2>
-          <button
-            onClick={() => setSelectedOrder(null)}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
-        </div>
-        <div className="mb-2">
-          <p className="text-gray-600 dark:text-gray-300">
-            Дата отгрузки: {new Date(selectedOrder.deliveryDate).toLocaleDateString()}
-          </p>
-        </div>
-        <div className="mb-4">
-          <p className="text-gray-600 dark:text-gray-300">Получатель: {selectedOrder.consignee}</p>
-          <p className="text-gray-600 dark:text-gray-300">Адрес: {selectedOrder.address}</p>
-        </div>{' '}
-        <div className="mb-6">
-          <label className="block text-lg font-medium mb-2 dark:text-gray-200">
-            Количество транспортных мест:
-          </label>
-          <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center text-2xl font-bold">
-            {transportUnits || 'Не указано'}
+    <>
+      {/* Основное модальное окно */}
+      <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+        <div
+          ref={modalRef}
+          className="modal dark:bg-gray-800 dark:text-white bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onClick={e => e.stopPropagation()}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          style={{
+            maxHeight: 'calc(100vh - 4rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}
+        >
+          {/* Header with basic info */}
+          <div className="flex justify-between items-center p-6 pb-0">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-xl font-bold dark:text-white">Печать этикеток</h2>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowInfoPanel(true)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Показать информацию о заказе"
+                title="Информация о заказе"
+              >
+                <InformationCircleIcon className="h-6 w-6" />
+              </button>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Закрыть"
+                title="Закрыть"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
-            <span className="inline-block bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded mr-1">
-              ⌨️
-            </span>
-            Можно вводить числа с клавиатуры, Enter для печати
-          </p>
-        </div>
-        {/* Виртуальная клавиатура для тач-интерфейса */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-            <button
-              key={num}
-              className="numpad-button"
-              onClick={() => addNumber(num)}
-              aria-label={`Number ${num}`}
-            >
-              {num}
-            </button>
-          ))}{' '}
-          <button
-            className="numpad-button bg-red-100 hover:bg-red-200 active:bg-red-300 dark:bg-red-900 dark:hover:bg-red-800 dark:active:bg-red-700 dark:text-white"
-            onClick={resetNumber}
-            aria-label="Clear"
-          >
-            C
-          </button>
-          <button
-            className="numpad-button dark:bg-gray-700 dark:text-white"
-            onClick={() => addNumber(0)}
-            aria-label="Number 0"
-          >
-            0
-          </button>
-          <button
-            className="numpad-button bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:active:bg-gray-400 dark:text-white"
-            onClick={() => addNumber(-1)}
-            aria-label="Backspace"
-          >
-            ⌫
-          </button>
-        </div>{' '}
-        <div className="flex justify-between space-x-4 mt-3">
-          <button
-            onClick={() => setSelectedOrder(null)}
-            className="flex items-center justify-center bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 dark:active:bg-gray-500 text-gray-800 dark:text-white font-bold py-4 px-6 rounded-lg shadow-sm touch-manipulation min-w-[100px] transition-colors"
-            style={{ minHeight: '56px' }}
-          >
-            <span>Отмена</span>
-          </button>
 
-          <button
-            onClick={handleArchiveWithoutPrint}
-            className="flex items-center justify-center bg-amber-500 hover:bg-amber-600 active:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700 dark:active:bg-amber-800 text-white font-bold py-4 px-6 rounded-lg shadow-sm touch-manipulation min-w-[150px] transition-colors"
-            style={{ minHeight: '56px' }}
-          >
-            <ArchiveBoxIcon className="h-6 w-6 mr-2" />
-            <span>Без печати</span>
-          </button>
+          {/* Order summary */}
+          <div className="px-6 py-3">
+            <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+              <h3 className="text-md font-bold dark:text-white">
+                Заказ #{selectedOrder.orderNumber}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {new Date(selectedOrder.deliveryDate).toLocaleDateString()} •{' '}
+                {selectedOrder.consignee}
+              </p>
+            </div>
+          </div>
 
-          <button
-            onClick={handlePrint}
-            disabled={isPrinting || transportUnits <= 0}
-            className={`flex items-center justify-center ${
-              isPrinting || transportUnits <= 0
-                ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 dark:active:bg-blue-500'
-            } text-white font-bold py-4 px-6 rounded-lg shadow-sm touch-manipulation min-w-[150px] transition-colors`}
-            style={{ minHeight: '56px' }}
+          {/* Main content - Transport units input */}
+          <div
+            className="px-6 flex-grow overflow-y-auto show-scrollbar-on-hover"
+            style={{ minHeight: '200px' }}
           >
-            {isPrinting ? (
-              <span className="flex items-center">
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-6 w-6 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+            <div className="mb-3 pt-2">
+              <label className="block text-lg font-medium dark:text-gray-200">
+                Количество транспортных мест:
+              </label>
+              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center text-3xl font-bold">
+                {transportUnits || 'Не указано'}
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                <span className="inline-block bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded mr-1">
+                  ⌨️
+                </span>
+                Можно вводить числа с клавиатуры, Enter для печати
+              </p>
+            </div>
+
+            {/* Numpad */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                <button
+                  key={num}
+                  className="numpad-button"
+                  onClick={() => addNumber(num)}
+                  aria-label={`Число ${num}`}
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Печать...
-              </span>
-            ) : (
-              <>
-                <PrinterIcon className="h-6 w-6 mr-2" />
-                <span>Печать этикеток</span>
-              </>
-            )}
-          </button>
+                  {num}
+                </button>
+              ))}
+              <button
+                className="numpad-button bg-red-100 hover:bg-red-200 active:bg-red-300 dark:bg-red-900 dark:hover:bg-red-800 dark:active:bg-red-700 dark:text-white"
+                onClick={resetNumber}
+                aria-label="Очистить"
+              >
+                C
+              </button>
+              <button
+                className="numpad-button dark:bg-gray-700 dark:text-white"
+                onClick={() => addNumber(0)}
+                aria-label="Число 0"
+              >
+                0
+              </button>
+              <button
+                className="numpad-button bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:active:bg-gray-400 dark:text-white"
+                onClick={() => addNumber(-1)}
+                aria-label="Удалить последнюю цифру"
+              >
+                ⌫
+              </button>
+            </div>
+          </div>
+
+          {/* Footer with buttons - fixed at the bottom */}
+          <div className="border-t border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex justify-between space-x-3">
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="flex items-center justify-center bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 dark:active:bg-gray-500 text-gray-800 dark:text-white font-bold py-3 px-4 rounded-lg shadow-sm touch-manipulation min-w-[80px] transition-colors"
+                style={{ minHeight: '50px' }}
+              >
+                <span>Отмена</span>
+              </button>
+
+              <button
+                onClick={handleArchiveWithoutPrint}
+                className="flex items-center justify-center bg-amber-500 hover:bg-amber-600 active:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700 dark:active:bg-amber-800 text-white font-bold py-3 px-4 rounded-lg shadow-sm touch-manipulation min-w-[130px] transition-colors"
+                style={{ minHeight: '50px' }}
+              >
+                <ArchiveBoxIcon className="h-5 w-5 mr-2" />
+                <span>Без печати</span>
+              </button>
+
+              <button
+                onClick={handlePrint}
+                disabled={isPrinting || transportUnits <= 0}
+                className={`flex items-center justify-center ${
+                  isPrinting || transportUnits <= 0
+                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-700 dark:hover:bg-blue-600 dark:active:bg-blue-500'
+                } text-white font-bold py-3 px-4 rounded-lg shadow-sm touch-manipulation min-w-[130px] transition-colors`}
+                style={{ minHeight: '50px' }}
+              >
+                {isPrinting ? (
+                  <span className="flex items-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Печать...
+                  </span>
+                ) : (
+                  <>
+                    <PrinterIcon className="h-5 w-5 mr-2" />
+                    <span>Печать</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Side panel for order details - moved outside modal-overlay to prevent event bubbling */}
+      {selectedOrder && showInfoPanel && (
+        <OrderInfoPanel order={selectedOrder} onClose={() => setShowInfoPanel(false)} />
+      )}
+    </>
   );
 };
 

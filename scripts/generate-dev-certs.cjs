@@ -38,7 +38,7 @@ prompt = no
 C = RU
 ST = Moscow
 L = Moscow
-O = Bottle Code WH Development
+O = Cider Code WH Development
 OU = IT Department
 CN = ${DOMAIN_NAME}
 
