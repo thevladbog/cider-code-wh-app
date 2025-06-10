@@ -44,20 +44,22 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
 
   // Для локального тестирования закомментируйте выше и используйте scripts/setup-update-server.cjs
 
-  // Проверка обновлений только в продакшн
-  if (is.production) {
+  // Проверка обновлений (включено для тестирования)
+  if (is.production || is.development) {
     // Проверять обновления при запуске
     setTimeout(() => {
       checkForUpdates();
     }, 3000);
 
-    // Проверять обновления каждые 4 часа
-    setInterval(
-      () => {
-        checkForUpdates();
-      },
-      4 * 60 * 60 * 1000
-    );
+    // Проверять обновления каждые 4 часа (только в production)
+    if (is.production) {
+      setInterval(
+        () => {
+          checkForUpdates();
+        },
+        4 * 60 * 60 * 1000
+      );
+    }
   }
 
   // Обработчики событий обновления
