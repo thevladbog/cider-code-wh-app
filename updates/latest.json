@@ -1,0 +1,22 @@
+{
+  "version": "1.0.2",
+  "notes": "## Что нового в версии 1.0.2\\n- Исправления ошибок\\n- Улучшения производительности\\n- Обновления безопасности\\n",
+  "releaseDate": "2025-06-10T22:06:55.171Z",
+  "platforms": {
+    "win32": {
+      "url": "http://localhost:3001/updates/bottle-code-wh-app-1.0.2-setup.exe",
+      "signature": "",
+      "size": 119047680
+    },
+    "darwin": {
+      "url": "http://localhost:3001/updates/bottle-code-wh-app-1.0.2.dmg",
+      "signature": "",
+      "size": 0
+    },
+    "linux": {
+      "url": "http://localhost:3001/updates/bottle-code-wh-app-1.0.2.AppImage",
+      "signature": "",
+      "size": 0
+    }
+  }
+}

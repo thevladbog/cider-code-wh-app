@@ -29,6 +29,7 @@ export interface OrdersResponse {
   page: number;
   limit: number;
   totalPage: number;
+  labelTemplate?: string; // Опциональный шаблон этикетки
 }
 
 /**

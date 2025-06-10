@@ -181,8 +181,37 @@ export const fetchOrders = async (status?: string): Promise<Order[]> => {
 
         // Проверяем структуру ответа (соответствие новой структуре API)
         if ('result' in response && Array.isArray(response.result)) {
-          // Конвертируем ApiOrder в Order (добавляем шаблон, если его нет)
+          // Получаем общий шаблон этикетки из ответа если он есть
+          const commonLabelTemplate = response.labelTemplate;
+
+          if (commonLabelTemplate) {
+            console.log(
+              '[API] Получен общий шаблон этикетки из API (первые 50 символов):',
+              commonLabelTemplate.substring(0, 50) + '...'
+            );
+          }
+
+          // Конвертируем ApiOrder в Order (используем шаблоны с приоритетом)
           return response.result.map(apiOrder => {
+            // Выбор шаблона с логами для отладки
+            let template: string;
+            if (apiOrder.template) {
+              template = apiOrder.template;
+              console.log(
+                `[API] Для заказа ${apiOrder.orderNumber} используется индивидуальный шаблон этикетки`
+              );
+            } else if (commonLabelTemplate) {
+              template = commonLabelTemplate;
+              console.log(
+                `[API] Для заказа ${apiOrder.orderNumber} используется общий шаблон этикетки из API`
+              );
+            } else {
+              template = generateDefaultTemplate();
+              console.log(
+                `[API] Для заказа ${apiOrder.orderNumber} используется шаблон по умолчанию`
+              );
+            }
+
             const order: Order = {
               id: apiOrder.id,
               orderNumber: apiOrder.orderNumber,
@@ -190,8 +219,7 @@ export const fetchOrders = async (status?: string): Promise<Order[]> => {
               status: apiOrder.status,
               consignee: apiOrder.consignee,
               address: apiOrder.address,
-              // Если шаблон отсутствует, используем шаблон по умолчанию
-              template: apiOrder.template || generateDefaultTemplate(),
+              template: template,
             };
             return order;
           });
@@ -214,8 +242,37 @@ export const fetchOrders = async (status?: string): Promise<Order[]> => {
 
       // Проверяем структуру ответа (соответствие новой структуре API)
       if (response.result && Array.isArray(response.result)) {
-        // Конвертируем ApiOrder в Order (добавляем шаблон, если его нет)
+        // Получаем общий шаблон этикетки из ответа если он есть
+        const commonLabelTemplate = response.labelTemplate;
+
+        if (commonLabelTemplate) {
+          console.log(
+            '[API] Получен общий шаблон этикетки из API (первые 50 символов):',
+            commonLabelTemplate.substring(0, 50) + '...'
+          );
+        }
+
+        // Конвертируем ApiOrder в Order (используем шаблоны с приоритетом)
         return response.result.map(apiOrder => {
+          // Выбор шаблона с логами для отладки
+          let template: string;
+          if (apiOrder.template) {
+            template = apiOrder.template;
+            console.log(
+              `[API] Для заказа ${apiOrder.orderNumber} используется индивидуальный шаблон этикетки`
+            );
+          } else if (commonLabelTemplate) {
+            template = commonLabelTemplate;
+            console.log(
+              `[API] Для заказа ${apiOrder.orderNumber} используется общий шаблон этикетки из API`
+            );
+          } else {
+            template = generateDefaultTemplate();
+            console.log(
+              `[API] Для заказа ${apiOrder.orderNumber} используется шаблон по умолчанию`
+            );
+          }
+
           const order: Order = {
             id: apiOrder.id,
             orderNumber: apiOrder.orderNumber,
@@ -223,8 +280,7 @@ export const fetchOrders = async (status?: string): Promise<Order[]> => {
             status: apiOrder.status,
             consignee: apiOrder.consignee,
             address: apiOrder.address,
-            // Если шаблон отсутствует, используем шаблон по умолчанию
-            template: apiOrder.template || generateDefaultTemplate(),
+            template: template,
           };
           return order;
         });

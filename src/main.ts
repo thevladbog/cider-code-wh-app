@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
+// Импортируем функционал для автоматического обновления
+import { setupAutoUpdater } from './utils/updater';
 
 // Handle squirrel events properly - only exit during actual installation events
 const handleSquirrelEvents = () => {
@@ -193,6 +195,9 @@ const createWindow = (): void => {
       if (process.platform === 'win32') {
         mainWindow.focus();
       }
+
+      // Инициализируем автоматическое обновление
+      setupAutoUpdater(mainWindow);
     }
   });
 
