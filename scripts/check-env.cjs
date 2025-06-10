@@ -32,11 +32,15 @@ function checkAndSetEnvironment() {
   if (releaseType === 'stable' && nodeEnv !== 'production') {
     console.log('⚠️ NODE_ENV не установлено в production для стабильного релиза!');
     console.log('🔧 Устанавливаем NODE_ENV=production...');
-    process.env.NODE_ENV = 'production';
-  } else if (releaseType !== 'stable' && nodeEnv === 'production') {
+    process.env.NODE_ENV = 'production';  } else if (releaseType !== 'stable' && nodeEnv === 'production') {
     console.log('⚠️ NODE_ENV=production для нестабильного релиза!');
     console.log('🔧 Устанавливаем NODE_ENV=development...');
     process.env.NODE_ENV = 'development';
+  } else if (!nodeEnv || nodeEnv === 'local') {
+    // Если NODE_ENV не установлено или равно "local", устанавливаем в зависимости от типа релиза
+    const targetEnv = releaseType === 'stable' ? 'production' : 'development';
+    console.log(`🔧 Устанавливаем NODE_ENV=${targetEnv}...`);
+    process.env.NODE_ENV = targetEnv;
   }
 
   // Выводим итоговое значение

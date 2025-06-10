@@ -125,6 +125,13 @@ declare global {
       appQuit: () => Promise<boolean>;
       windowMinimize: () => Promise<boolean>;
       windowMaximize: () => Promise<boolean>;
+
+      // Auto-update methods
+      checkForUpdates: () => Promise<any>;
+      getCurrentVersion: () => Promise<string>;
+      downloadUpdate: () => Promise<void>;
+      quitAndInstall: () => Promise<void>;
+      onUpdateStatus: (callback: (event: any, arg: any) => void) => () => void;
     };
   }
 }

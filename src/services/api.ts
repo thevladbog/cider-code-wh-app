@@ -183,27 +183,35 @@ export const fetchOrders = async (status?: string): Promise<Order[]> => {
         if ('result' in response && Array.isArray(response.result)) {
           // Получаем общий шаблон этикетки из ответа если он есть
           const commonLabelTemplate = response.labelTemplate;
-          
+
           if (commonLabelTemplate) {
-            console.log('[API] Получен общий шаблон этикетки из API (первые 50 символов):', 
-              commonLabelTemplate.substring(0, 50) + '...');
+            console.log(
+              '[API] Получен общий шаблон этикетки из API (первые 50 символов):',
+              commonLabelTemplate.substring(0, 50) + '...'
+            );
           }
-          
+
           // Конвертируем ApiOrder в Order (используем шаблоны с приоритетом)
           return response.result.map(apiOrder => {
             // Выбор шаблона с логами для отладки
             let template: string;
             if (apiOrder.template) {
               template = apiOrder.template;
-              console.log(`[API] Для заказа ${apiOrder.orderNumber} используется индивидуальный шаблон этикетки`);
+              console.log(
+                `[API] Для заказа ${apiOrder.orderNumber} используется индивидуальный шаблон этикетки`
+              );
             } else if (commonLabelTemplate) {
               template = commonLabelTemplate;
-              console.log(`[API] Для заказа ${apiOrder.orderNumber} используется общий шаблон этикетки из API`);
+              console.log(
+                `[API] Для заказа ${apiOrder.orderNumber} используется общий шаблон этикетки из API`
+              );
             } else {
               template = generateDefaultTemplate();
-              console.log(`[API] Для заказа ${apiOrder.orderNumber} используется шаблон по умолчанию`);
+              console.log(
+                `[API] Для заказа ${apiOrder.orderNumber} используется шаблон по умолчанию`
+              );
             }
-            
+
             const order: Order = {
               id: apiOrder.id,
               orderNumber: apiOrder.orderNumber,
@@ -236,27 +244,35 @@ export const fetchOrders = async (status?: string): Promise<Order[]> => {
       if (response.result && Array.isArray(response.result)) {
         // Получаем общий шаблон этикетки из ответа если он есть
         const commonLabelTemplate = response.labelTemplate;
-        
+
         if (commonLabelTemplate) {
-          console.log('[API] Получен общий шаблон этикетки из API (первые 50 символов):', 
-            commonLabelTemplate.substring(0, 50) + '...');
+          console.log(
+            '[API] Получен общий шаблон этикетки из API (первые 50 символов):',
+            commonLabelTemplate.substring(0, 50) + '...'
+          );
         }
-        
+
         // Конвертируем ApiOrder в Order (используем шаблоны с приоритетом)
         return response.result.map(apiOrder => {
           // Выбор шаблона с логами для отладки
           let template: string;
           if (apiOrder.template) {
             template = apiOrder.template;
-            console.log(`[API] Для заказа ${apiOrder.orderNumber} используется индивидуальный шаблон этикетки`);
+            console.log(
+              `[API] Для заказа ${apiOrder.orderNumber} используется индивидуальный шаблон этикетки`
+            );
           } else if (commonLabelTemplate) {
             template = commonLabelTemplate;
-            console.log(`[API] Для заказа ${apiOrder.orderNumber} используется общий шаблон этикетки из API`);
+            console.log(
+              `[API] Для заказа ${apiOrder.orderNumber} используется общий шаблон этикетки из API`
+            );
           } else {
             template = generateDefaultTemplate();
-            console.log(`[API] Для заказа ${apiOrder.orderNumber} используется шаблон по умолчанию`);
+            console.log(
+              `[API] Для заказа ${apiOrder.orderNumber} используется шаблон по умолчанию`
+            );
           }
-          
+
           const order: Order = {
             id: apiOrder.id,
             orderNumber: apiOrder.orderNumber,

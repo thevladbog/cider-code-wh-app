@@ -2,7 +2,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // Получаем текущую среду из переменной окружения или используем development по умолчанию
-const mode = process.env.NODE_ENV || 'development';
+// Избегаем значения "local", которое конфликтует с Vite
+let mode = process.env.NODE_ENV || 'development';
+if (mode === 'local') {
+  mode = 'development';
+}
 console.log(`Building with NODE_ENV: ${mode}`);
 
 // https://vitejs.dev/config
