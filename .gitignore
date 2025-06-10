@@ -99,10 +99,11 @@ certs/
 *.p12
 *.pfx
 
+# TLS status file (contains certificate info)
+tls-status.json
+
 # Environment files with secrets
 .env.local
 .env.production
 
 secure-certs/
-
-tls-status.*

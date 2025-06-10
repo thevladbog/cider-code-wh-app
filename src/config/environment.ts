@@ -26,6 +26,8 @@ export function getEnvironment(): Environment {
 export function initEnvironment(): void {
   // Определяем текущую среду выполнения
   const nodeEnv = process.env.NODE_ENV;
+  
+  console.log(`[ENV] Current NODE_ENV: ${nodeEnv}`);
 
   // Устанавливаем базовый URL API в зависимости от среды
   if (nodeEnv === 'production') {

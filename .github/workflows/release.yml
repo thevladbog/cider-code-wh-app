@@ -185,7 +185,37 @@ jobs:
           echo "💡 Download certificates artifact and deploy to production server"
       
       - name: Build and make application
-        run: npm run make
+        shell: bash
+        run: |
+          if [ "${{ needs.version.outputs.release_type }}" == "stable" ]; then
+            echo "🏭 Building production release with stable API URL..."
+            echo "NODE_ENV=production" >> $GITHUB_ENV
+            
+            # Явно сообщаем о том, какой API URL будет использоваться
+            echo "📢 ⚠️ API URL будет: https://api.bottlecode.app ⚠️ 📢"
+            
+            if [ "${{ runner.os }}" == "Windows" ]; then
+              echo "Setting NODE_ENV=production in Windows environment..."
+              $env:NODE_ENV="production" && npm run make
+            else
+              echo "Setting NODE_ENV=production in Unix environment..."
+              NODE_ENV=production npm run make
+            fi
+          else
+            echo "🏭 Building beta release..."
+            echo "NODE_ENV=development" >> $GITHUB_ENV
+            
+            # Явно сообщаем о том, какой API URL будет использоваться
+            echo "📢 API URL будет: https://beta.api.bottlecode.app 📢"
+            
+            if [ "${{ runner.os }}" == "Windows" ]; then
+              echo "Setting NODE_ENV=development in Windows environment..."
+              $env:NODE_ENV="development" && npm run make
+            else
+              echo "Setting NODE_ENV=development in Unix environment..."
+              NODE_ENV=development npm run make
+            fi
+          fi
         
       - name: Upload Windows artifacts
         if: runner.os == 'Windows'
