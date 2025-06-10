@@ -5,8 +5,7 @@ on:
     branches:
       - 'release-stable'
       - 'release-beta'
-    tags:
-      - 'v*'
+  # Убираем теги отсюда, так как их обрабатывает ci-cd.yml
 
 jobs:
   version:
@@ -23,7 +22,7 @@ jobs:
       - name: Determine release type
         id: branch-check
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/release-stable" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/release-stable" ]]; then
             echo "release_type=stable" >> $GITHUB_OUTPUT
           else
             echo "release_type=beta" >> $GITHUB_OUTPUT

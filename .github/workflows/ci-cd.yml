@@ -1,0 +1,133 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22.x'
+
+jobs:
+  # Job 1: Code Quality and Testing
+  quality:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxtst-dev libpng++-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  # Job 2: Build for Testing (on push/PR)
+  build-test:
+    name: Build & Test Package
+    needs: quality
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxtst-dev libpng++-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package application
+        run: npm run package
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-app-${{ runner.os }}-${{ github.sha }}
+          path: out/
+          retention-days: 7
+
+  # Job 3: Release Build (only on tags)
+  release:
+    name: Release Build
+    needs: quality
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/make/squirrel.windows/x64/*.exe
+            out/make/squirrel.windows/x64/*.nupkg
+            out/make/squirrel.windows/x64/RELEASES
+          draft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ github.ref_name }}
+          path: out/make/squirrel.windows/x64/
+          retention-days: 30
