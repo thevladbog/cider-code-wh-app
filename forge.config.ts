@@ -69,7 +69,7 @@ const config: ForgeConfig = {
       // Для MakerZIP нет свойства name, но можно задать через outDir
     }, ['darwin']), 
     new MakerDMG({
-      name: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`,
+      name: `bottle-c-wh-${packageData.version}`,
       // Настройки для DMG
       format: 'ULFO',
       // Добавляем иконку для DMG
@@ -78,13 +78,13 @@ const config: ForgeConfig = {
     new MakerRpm({
       options: {
         name: 'bottle-code-wh-app',
-        productName: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`
+        productName: 'bottle-code-wh-app'
       }
     }), 
     new MakerDeb({
       options: {
         name: 'bottle-code-wh-app',
-        productName: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`,
+        productName: 'bottle-code-wh-app',
         maintainer: 'Vladislav Bogatyrev <vladislav.bogatyrev@gmail.com>'
       }
     })
