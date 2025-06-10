@@ -9,7 +9,7 @@ export enum UpdateStatus {
   NotAvailable = 'update-not-available',
   Error = 'error',
   Downloaded = 'update-downloaded',
-  Progress = 'download-progress'
+  Progress = 'download-progress',
 }
 
 // Интерфейс для сообщений об обновлении
@@ -33,13 +33,15 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
   // Логирование и отладка
   autoUpdater.logger = console;
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;  // Устанавливаем URL сервера обновлений для GitHub Releases
-  autoUpdater.setFeedURL({ 
-    provider: 'github', 
-    owner: 'thevladbog', 
-    repo: 'cider-code-wh-app' 
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  // Устанавливаем URL сервера обновлений для GitHub Releases
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'thevladbog',
+    repo: 'cider-code-wh-app',
   });
-  
+
   // Для локального тестирования закомментируйте выше и используйте scripts/setup-update-server.cjs
 
   // Проверка обновлений только в продакшн
@@ -50,22 +52,25 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
     }, 3000);
 
     // Проверять обновления каждые 4 часа
-    setInterval(() => {
-      checkForUpdates();
-    }, 4 * 60 * 60 * 1000);
+    setInterval(
+      () => {
+        checkForUpdates();
+      },
+      4 * 60 * 60 * 1000
+    );
   }
 
   // Обработчики событий обновления
   autoUpdater.on('checking-for-update', () => {
     sendStatusToWindow(mainWindow, {
-      status: UpdateStatus.Checking
+      status: UpdateStatus.Checking,
     });
   });
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
     sendStatusToWindow(mainWindow, {
       status: UpdateStatus.Available,
-      info
+      info,
     });
 
     // Показать диалог подтверждения загрузки
@@ -76,7 +81,7 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
         message: `Доступна новая версия: ${info.version}`,
         detail: 'Хотите загрузить обновление сейчас?',
         buttons: ['Загрузить', 'Позже'],
-        defaultId: 0
+        defaultId: 0,
       })
       .then(({ response }) => {
         if (response === 0) {
@@ -89,14 +94,14 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
   autoUpdater.on('update-not-available', (info: UpdateInfo) => {
     sendStatusToWindow(mainWindow, {
       status: UpdateStatus.NotAvailable,
-      info
+      info,
     });
   });
 
   autoUpdater.on('error', (err: Error) => {
     sendStatusToWindow(mainWindow, {
       status: UpdateStatus.Error,
-      error: err.message
+      error: err.message,
     });
     console.error('Ошибка автообновления:', err);
   });
@@ -108,15 +113,15 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
         percent: progress.percent,
         bytesPerSecond: progress.bytesPerSecond,
         total: progress.total,
-        transferred: progress.transferred
-      }
+        transferred: progress.transferred,
+      },
     });
   });
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
     sendStatusToWindow(mainWindow, {
       status: UpdateStatus.Downloaded,
-      info
+      info,
     });
 
     // Показать диалог для установки обновления
@@ -127,7 +132,7 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
         message: `Обновление до версии ${info.version} загружено`,
         detail: 'Приложение будет перезапущено для установки обновления.',
         buttons: ['Установить сейчас', 'Установить позже'],
-        defaultId: 0
+        defaultId: 0,
       })
       .then(({ response }) => {
         if (response === 0) {

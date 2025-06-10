@@ -188,4 +188,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: (): Promise<boolean> => {
     return ipcRenderer.invoke('window:maximize');
   },
+
+  // API для автоматического обновления
+  checkForUpdates: (): Promise<unknown> => {
+    return ipcRenderer.invoke('check-for-updates');
+  },
+
+  getCurrentVersion: (): Promise<string> => {
+    return ipcRenderer.invoke('get-current-version');
+  },
+
+  downloadUpdate: (): Promise<void> => {
+    return ipcRenderer.invoke('download-update');
+  },
+
+  quitAndInstall: (): Promise<void> => {
+    return ipcRenderer.invoke('quit-and-install');
+  },
+
+  // Подписка на события обновления
+  onUpdateStatus: (callback: (event: unknown, arg: unknown) => void) => {
+    const listener = (_event: unknown, arg: unknown) => callback(_event, arg);
+    ipcRenderer.on('update-status', listener);
+    return () => {
+      ipcRenderer.removeListener('update-status', listener);
+    };
+  },
 });
