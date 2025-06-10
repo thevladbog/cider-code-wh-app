@@ -57,12 +57,11 @@ describe('update-package-version', () => {
       expect(isValidVersion('1.0.0')).toBe(true);
       expect(isValidVersion('1.2.3')).toBe(true);
       expect(isValidVersion('10.20.30')).toBe(true);
-    });
-
-    it('should validate beta versions', () => {
+    });    it('should validate beta versions', () => {
       expect(isValidVersion('1.0.0-beta.1')).toBe(true);
-      expect(isValidVersion('1.2.3-beta.20241211')).toBe(true);
+      expect(isValidVersion('1.2.3-beta.5')).toBe(true);
       expect(isValidVersion('1.0.0-alpha.1')).toBe(true);
+      expect(isValidVersion('1.0.0-beta.10')).toBe(true);
     });
 
     it('should reject invalid versions', () => {

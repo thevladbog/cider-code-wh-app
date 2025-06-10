@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write # Разрешение для записи в репозиторий (коммиты и пуши)
     outputs:
-      new_version: ${{ steps.semver.outputs.version }}
+      new_version: ${{ steps.version-fix.outputs.version }}
       release_type: ${{ steps.branch-check.outputs.release_type }}
     steps:
       - name: Check out Git repository
@@ -41,10 +41,28 @@ jobs:
           version_format: "${major}.${minor}.${patch}${{ steps.branch-check.outputs.release_type == 'beta' && '-beta.${increment}' || '' }}"
           bump_each_commit: true
           
+      - name: Fix beta version format
+        id: version-fix
+        run: |
+          RAW_VERSION="${{ steps.semver.outputs.version }}"
+          if [[ "$RAW_VERSION" == *"-beta.0" ]]; then
+            # Заменяем .0 на .1 для первой бета версии
+            FIXED_VERSION="${RAW_VERSION%-beta.0}-beta.1"
+          elif [[ "$RAW_VERSION" == *"-beta."* ]]; then
+            # Увеличиваем номер бета версии на 1
+            BETA_NUM=$(echo "$RAW_VERSION" | sed 's/.*-beta\.//')
+            NEW_BETA_NUM=$((BETA_NUM + 1))
+            FIXED_VERSION="${RAW_VERSION%-beta.*}-beta.${NEW_BETA_NUM}"
+          else
+            FIXED_VERSION="$RAW_VERSION"
+          fi
+          echo "version=$FIXED_VERSION" >> $GITHUB_OUTPUT
+          echo "🔧 Fixed version: $RAW_VERSION → $FIXED_VERSION"
+          
       - name: Update package.json version
         run: |
-          echo "🔄 Updating package.json version to ${{ steps.semver.outputs.version }}"
-          node scripts/update-package-version.cjs ${{ steps.semver.outputs.version }}
+          echo "🔄 Updating package.json version to ${{ steps.version-fix.outputs.version }}"
+          node scripts/update-package-version.cjs ${{ steps.version-fix.outputs.version }}
           
       - name: Commit updated package.json
         run: |
@@ -54,7 +72,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "📝 No changes to package.json version"
           else
-            git commit -m "chore: update version to ${{ steps.semver.outputs.version }} [skip ci]"
+            git commit -m "chore: update version to ${{ steps.version-fix.outputs.version }} [skip ci]"
             git push
             echo "✅ package.json version updated and pushed"
           fi
@@ -74,7 +92,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          VERSION: ${{ steps.semver.outputs.version }}
+          VERSION: ${{ steps.version-fix.outputs.version }}
           RELEASE_TYPE: ${{ steps.branch-check.outputs.release_type }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SERVER_URL: ${{ github.server_url }}

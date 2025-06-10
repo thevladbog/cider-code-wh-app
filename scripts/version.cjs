@@ -76,12 +76,28 @@ const updateVersion = () => {
   
   // Формируем новую версию
   let newVersion = `${newMajor}.${newMinor}.${newPatch}`;
-  
-  // Добавляем суффикс для бета версий
+    // Добавляем суффикс для бета версий
   if (releaseType === 'beta') {
-    // Получаем текущую дату в формате YYYYMMDD
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    newVersion += `-beta.${date}`;
+    // Используем номер инкремента для бета версий, начиная с 1
+    // Проверяем существующие теги для определения следующего номера
+    try {
+      const existingTags = execSync(`git tag -l "v${newMajor}.${newMinor}.${newPatch}-beta.*"`).toString().trim();
+      let betaNumber = 1;
+      
+      if (existingTags) {
+        const tags = existingTags.split('\n').filter(tag => tag.trim());
+        const betaNumbers = tags.map(tag => {
+          const match = tag.match(/v\d+\.\d+\.\d+-beta\.(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        });
+        betaNumber = Math.max(...betaNumbers) + 1;
+      }
+      
+      newVersion += `-beta.${betaNumber}`;
+    } catch (error) {
+      // Если не удалось получить теги (например, в новом репозитории), начинаем с 1
+      newVersion += `-beta.1`;
+    }
   }
   
   // Обновляем package.json

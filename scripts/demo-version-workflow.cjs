@@ -47,10 +47,10 @@ function generateSemanticVersion(releaseType = 'stable') {
   
   // Формируем новую версию
   let newVersion = `${major}.${minor}.${newPatch}`;
-  
-  if (releaseType === 'beta') {
-    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    newVersion += `-beta.${timestamp}`;
+    if (releaseType === 'beta') {
+    // Для демонстрации используем простой номер 1
+    // В реальной системе он будет автоматически инкрементироваться
+    newVersion += `-beta.1`;
   }
   
   return newVersion;
