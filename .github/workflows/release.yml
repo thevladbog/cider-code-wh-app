@@ -10,6 +10,8 @@ on:
 jobs:
   version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Разрешение для записи в репозиторий (коммиты и пуши)
     outputs:
       new_version: ${{ steps.semver.outputs.version }}
       release_type: ${{ steps.branch-check.outputs.release_type }}
@@ -38,6 +40,24 @@ jobs:
           minor_pattern: "(MINOR)"
           version_format: "${major}.${minor}.${patch}${{ steps.branch-check.outputs.release_type == 'beta' && '-beta.${increment}' || '' }}"
           bump_each_commit: true
+          
+      - name: Update package.json version
+        run: |
+          echo "🔄 Updating package.json version to ${{ steps.semver.outputs.version }}"
+          node scripts/update-package-version.cjs ${{ steps.semver.outputs.version }}
+          
+      - name: Commit updated package.json
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json
+          if git diff --staged --quiet; then
+            echo "📝 No changes to package.json version"
+          else
+            git commit -m "chore: update version to ${{ steps.semver.outputs.version }} [skip ci]"
+            git push
+            echo "✅ package.json version updated and pushed"
+          fi
           
       - name: Verify notification script exists
         run: |
