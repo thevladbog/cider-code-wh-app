@@ -41,7 +41,7 @@ const config: ForgeConfig = {
     // Conditionally add certs as extra resources if they exist
     ...(extraResources.length > 0 && { extraResource: extraResources }),
     // Добавляем иконку приложения
-    icon: './src/assets/logo',
+    icon: './src/assets/icon',
     // Настройки для Windows
     win32metadata: {
       CompanyName: 'v-b.tech',
@@ -55,6 +55,8 @@ const config: ForgeConfig = {
     new MakerSquirrel({
       setupExe: `bottle-code-wh-app-${packageData.version}-setup.exe`,
       noMsi: true,
+      // Добавляем иконку для установщика (используем новый ICO файл)
+      setupIcon: './src/assets/icon.ico',
       // Настройки для автоматического обновления
       // remoteReleases: 'http://localhost:3001', // Для локального тестирования
       // Опции для подписи (только если есть сертификаты)
@@ -69,7 +71,9 @@ const config: ForgeConfig = {
     new MakerDMG({
       name: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`,
       // Настройки для DMG
-      format: 'ULFO'
+      format: 'ULFO',
+      // Добавляем иконку для DMG
+      icon: './src/assets/icon.icns'
     }, ['darwin']),
     new MakerRpm({
       options: {
