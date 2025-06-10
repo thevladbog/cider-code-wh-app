@@ -1,7 +1,7 @@
 {
   "name": "bottle-code-wh-app",
   "productName": "bottle-code-wh-app",
-  "version": "1.0.2",
+  "version": "1.0.19-beta.1",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
   "repository": {
