@@ -10,6 +10,8 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import * as fs from 'fs';
 import * as path from 'path';
+// Загружаем данные пакета для получения версии и других метаданных
+const packageData = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
 // Check if certs directory exists before including it
 const certsPath = path.join(__dirname, 'certs');
@@ -51,15 +53,51 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      setupExe: 'bottle-code-wh-app-setup.exe',
-      noMsi: true
+      setupExe: `bottle-code-wh-app-${packageData.version}-setup.exe`,
+      noMsi: true,
+      // Настройки для автоматического обновления
+      // remoteReleases: 'http://localhost:3001', // Для локального тестирования
+      // Опции для подписи (только если есть сертификаты)
+      ...(process.env.WINDOWS_CERTIFICATE_FILE && {
+        certificateFile: process.env.WINDOWS_CERTIFICATE_FILE,
+        certificatePassword: process.env.WINDOWS_CERTIFICATE_PASSWORD
+      })
     }), 
-    new MakerZIP({}, ['darwin']), 
+    new MakerZIP({
+      // Для MakerZIP нет свойства name, но можно задать через outDir
+    }, ['darwin']), 
     new MakerDMG({
-      name: 'Bottle Code WH App'
+      name: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`,
+      // Настройки для DMG
+      format: 'ULFO'
     }, ['darwin']),
-    new MakerRpm({}), 
-    new MakerDeb({})
+    new MakerRpm({
+      options: {
+        name: 'bottle-code-wh-app',
+        productName: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`
+      }
+    }), 
+    new MakerDeb({
+      options: {
+        name: 'bottle-code-wh-app',
+        productName: `${packageData.productName || 'Bottle Code WH App'} ${packageData.version}`,
+        maintainer: 'Vladislav Bogatyrev <vladislav.bogatyrev@gmail.com>'
+      }
+    })
+  ],
+  // Настройка для публикации в GitHub Releases
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'thevladbog',
+          name: 'cider-code-wh-app'
+        },
+        draft: true,
+        prerelease: packageData.version.includes('beta')
+      }
+    }
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
