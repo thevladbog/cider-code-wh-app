@@ -413,7 +413,6 @@ jobs:
             linux-release-${{ needs.version.outputs.new_version }}/**/*
             macos-release-${{ needs.version.outputs.new_version }}/**/*
             secure-certificates-${{ needs.version.outputs.new_version }}/**/*
-            windows-release-${{ needs.version.outputs.new_version }}/updates/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
