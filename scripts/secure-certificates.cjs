@@ -14,7 +14,7 @@ const https = require('https');
 // Константы
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const VERSION = process.env.VERSION || '1.0.0';
+const VERSION = process.env.VERSION || process.env.APP_VERSION || '1.0.0';
 
 // Пути к файлам
 const certsDir = path.join(process.cwd(), 'certs');
