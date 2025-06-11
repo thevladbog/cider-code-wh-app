@@ -141,6 +141,8 @@ jobs:
         run: |
           echo "🔍 Checking macOS DMG name configuration..."
           npm run check:dmg
+        env:
+          APP_VERSION: ${{ needs.version.outputs.new_version }}
         
       - name: Generate development certificates for beta
         if: needs.version.outputs.release_type == 'beta'
@@ -233,9 +235,11 @@ jobs:
         run: |
           echo "🏭 Building production release with stable API URL..."
           echo "📢 ⚠️ API URL будет: https://api.bottlecode.app ⚠️ 📢"
+          echo "📦 Using version: ${{ needs.version.outputs.new_version }}"
           npm run make
         env:
           NODE_ENV: production
+          APP_VERSION: ${{ needs.version.outputs.new_version }}
           
       - name: Build and make application (beta)
         if: needs.version.outputs.release_type == 'beta'
@@ -243,9 +247,16 @@ jobs:
         run: |
           echo "🏭 Building beta release..."
           echo "📢 API URL будет: https://beta.api.bottlecode.app 📢"
+          echo "📦 Using version: ${{ needs.version.outputs.new_version }}"
           npm run make
         env:
           NODE_ENV: development
+          APP_VERSION: ${{ needs.version.outputs.new_version }}
+        
+      - name: Generate latest.yml for electron-updater
+        run: npm run generate-latest-yml
+        env:
+          APP_VERSION: ${{ needs.version.outputs.new_version }}
         
       - name: Upload Windows artifacts
         if: runner.os == 'Windows'
@@ -255,6 +266,7 @@ jobs:
           path: |
             out/make/squirrel.windows/x64/*.exe
             out/make/zip/win32/x64/*.zip
+            updates/latest.yml
           retention-days: 30
             
       - name: Upload Linux artifacts
@@ -401,6 +413,7 @@ jobs:
             linux-release-${{ needs.version.outputs.new_version }}/**/*
             macos-release-${{ needs.version.outputs.new_version }}/**/*
             secure-certificates-${{ needs.version.outputs.new_version }}/**/*
+            windows-release-${{ needs.version.outputs.new_version }}/updates/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
