@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => ({
       ? JSON.stringify('http://localhost:5173/') 
       : 'undefined',
     MAIN_WINDOW_VITE_NAME: JSON.stringify('main_window'),
+    // Pass NODE_ENV to the main process runtime
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
   },
   build: {
     outDir: '.vite/build',

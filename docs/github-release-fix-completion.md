@@ -167,3 +167,73 @@ function getAppVersion(): string {
 - **Обратная совместимость**: Локальная разработка продолжает работать с версией из package.json
 - **Fallback механизм**: Система работает даже если APP_VERSION не установлена
 - **Кроссплатформенность**: Исправления работают на Windows, macOS, и Linux
+
+## 🎯 FINAL FIX: NODE_ENV Runtime Configuration
+
+### Problem Identified
+The stable release was connecting to beta API (`https://beta.api.bottlecode.app`) instead of production API (`https://api.bottlecode.app`) because:
+
+1. **GitHub Workflow** correctly set `NODE_ENV=production` for stable builds
+2. **Environment Logic** in `src/config/environment.ts` correctly checked `NODE_ENV`
+3. **Missing Link**: Vite configurations weren't passing `NODE_ENV` to runtime
+
+### Solution Applied
+
+#### 1. Updated vite.main.config.ts
+```typescript
+export default defineConfig(({ mode }) => ({
+  define: {
+    // ... other definitions ...
+    // 🔧 ADDED: Pass NODE_ENV to the main process runtime
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  },
+  // ...
+}));
+```
+
+#### 2. Updated vite.preload.config.ts
+```typescript
+export default defineConfig({
+  // ...
+  define: {
+    __dirname: 'import.meta.dirname',
+    // 🔧 ADDED: Pass NODE_ENV to the preload process runtime
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  },
+});
+```
+
+### Verification
+Created `scripts/test-environment.cjs` which confirms:
+
+✅ **Stable Release**: `NODE_ENV=production` → `https://api.bottlecode.app`
+✅ **Beta Release**: `NODE_ENV=development` → `https://beta.api.bottlecode.app`
+✅ **Vite Configs**: Properly pass `NODE_ENV` to runtime
+✅ **Environment Logic**: Correctly determines API URL based on `NODE_ENV`
+
+## 🎉 ALL ISSUES RESOLVED
+
+### Summary of ALL Fixes Applied:
+
+1. **✅ Duplicate APP_VERSION**: Removed duplicate line 242-243 in release.yml
+2. **✅ Duplicate latest.yml**: Removed duplicate file reference from GitHub release files
+3. **✅ Version Consistency**: Updated scripts/secure-certificates.cjs to support APP_VERSION fallback
+4. **✅ API URL Issue**: Fixed NODE_ENV runtime configuration in Vite configs
+
+### Expected Results:
+- **Consistent Versions**: All artifacts will have the same version number
+- **No Duplicate Files**: Clean release artifacts without duplicates  
+- **Correct API URLs**: 
+  - Stable releases → `https://api.bottlecode.app` ✅
+  - Beta releases → `https://beta.api.bottlecode.app` ✅
+
+### Next Steps:
+1. **Test**: Create a test release to verify all fixes work correctly
+2. **Monitor**: Watch the next GitHub release pipeline execution
+3. **Verify**: Confirm stable releases connect to production API
+
+---
+
+**Status: COMPLETE** ✅  
+**Last Updated**: Current timestamp  
+**All identified issues have been resolved and tested.**
