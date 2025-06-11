@@ -28,8 +28,8 @@ function getAppVersion(): string {
   }
 }
 
-// Загружаем данные пакета для получения метаданных
-const packageData = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+// Загружаем данные пакета для получения метаданных  
+// const packageData = JSON.parse(fs.readFileSync('./package.json', 'utf8')); // Больше не нужно
 const appVersion = getAppVersion();
 
 // Check if certs directory exists before including it
@@ -118,7 +118,7 @@ const config: ForgeConfig = {
           name: 'cider-code-wh-app'
         },
         draft: true,
-        prerelease: packageData.version.includes('beta')
+        prerelease: appVersion.includes('beta')
       }
     }
   ],

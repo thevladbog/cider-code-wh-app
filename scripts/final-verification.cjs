@@ -51,10 +51,11 @@ try {
 }
 
 // Check 2: Vite configurations
-console.log('\n📋 Check 2: Vite Configuration for NODE_ENV');
+console.log('\n📋 Check 2: Vite Configuration for NODE_ENV and APP_VERSION');
 try {
   const viteMainConfig = fs.readFileSync('vite.main.config.ts', 'utf8');
   const vitePreloadConfig = fs.readFileSync('vite.preload.config.ts', 'utf8');
+  const viteRendererConfig = fs.readFileSync('vite.renderer.config.ts', 'utf8');
   
   if (viteMainConfig.includes("'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV")) {
     console.log('✅ vite.main.config.ts passes NODE_ENV to runtime');
@@ -63,10 +64,31 @@ try {
     allChecksPass = false;
   }
   
+  if (viteMainConfig.includes("'process.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION")) {
+    console.log('✅ vite.main.config.ts passes APP_VERSION to runtime');
+  } else {
+    issues.push('❌ vite.main.config.ts does not pass APP_VERSION');
+    allChecksPass = false;
+  }
+  
   if (vitePreloadConfig.includes("'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV")) {
     console.log('✅ vite.preload.config.ts passes NODE_ENV to runtime');
   } else {
     issues.push('❌ vite.preload.config.ts does not pass NODE_ENV');
+    allChecksPass = false;
+  }
+  
+  if (vitePreloadConfig.includes("'process.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION")) {
+    console.log('✅ vite.preload.config.ts passes APP_VERSION to runtime');
+  } else {
+    issues.push('❌ vite.preload.config.ts does not pass APP_VERSION');
+    allChecksPass = false;
+  }
+  
+  if (viteRendererConfig.includes("'process.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION")) {
+    console.log('✅ vite.renderer.config.ts passes APP_VERSION to runtime');
+  } else {
+    issues.push('❌ vite.renderer.config.ts does not pass APP_VERSION');
     allChecksPass = false;
   }
   
@@ -111,8 +133,27 @@ try {
   allChecksPass = false;
 }
 
-// Check 5: Documentation
-console.log('\n📋 Check 5: Documentation Updates');
+// Check 5: Version consistency in forge.config.ts
+console.log('\n📋 Check 5: Version Consistency in forge.config.ts');
+try {
+  const forgeConfig = fs.readFileSync('forge.config.ts', 'utf8');
+  
+  if (forgeConfig.includes('getAppVersion()') && 
+      forgeConfig.includes('const appVersion = getAppVersion()') &&
+      forgeConfig.includes('prerelease: appVersion.includes(\'beta\')')) {
+    console.log('✅ forge.config.ts uses dynamic appVersion consistently');
+  } else {
+    issues.push('❌ forge.config.ts version configuration is inconsistent');
+    allChecksPass = false;
+  }
+  
+} catch (error) {
+  issues.push('❌ Could not read forge.config.ts');
+  allChecksPass = false;
+}
+
+// Check 6: Documentation
+console.log('\n📋 Check 6: Documentation Updates');
 try {
   const docs = fs.readFileSync('docs/github-release-fix-completion.md', 'utf8');
   
@@ -150,6 +191,9 @@ console.log('   ✅ Fixed duplicate APP_VERSION in release.yml');
 console.log('   ✅ Removed duplicate latest.yml file reference');
 console.log('   ✅ Added APP_VERSION support in secure-certificates.cjs');
 console.log('   ✅ Fixed NODE_ENV runtime configuration in Vite');
+console.log('   ✅ Added APP_VERSION runtime configuration in Vite');
+console.log('   ✅ Fixed version consistency in forge.config.ts');
+console.log('   ✅ Updated getAppVersion() to use APP_VERSION priority');
 console.log('   ✅ Created comprehensive documentation');
 
 console.log('\n🎯 Expected Results:');

@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => ({
     MAIN_WINDOW_VITE_NAME: JSON.stringify('main_window'),
     // Pass NODE_ENV to the main process runtime
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    // Pass APP_VERSION to the main process runtime
+    'process.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION || ''),
   },
   build: {
     outDir: '.vite/build',

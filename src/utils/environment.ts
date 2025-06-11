@@ -12,9 +12,15 @@ export const is = {
 
 /**
  * Получить версию приложения
- * @returns Текущая версия из package.json
+ * @returns Текущая версия из APP_VERSION или package.json
  */
 export function getAppVersion(): string {
+  // Сначала пробуем взять версию из переменной окружения (приоритет для CI/CD)
+  if (process.env.APP_VERSION) {
+    return process.env.APP_VERSION;
+  }
+
+  // Иначе используем версию из package.json через Electron API
   return app.getVersion();
 }
 

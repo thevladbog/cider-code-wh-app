@@ -57,10 +57,10 @@
     "certs:generate-letsencrypt": "node scripts/generate-letsencrypt-http.cjs",
     "certs:renew": "node scripts/renew-certificates.cjs",
     "certs:setup-auto-renewal": "node scripts/setup-auto-renewal.cjs",
-    "certs:load-local": "set SECRET_PROVIDER=local && node scripts/load-certificates.cjs",
-    "certs:load-letsencrypt": "set SECRET_PROVIDER=letsencrypt && node scripts/load-certificates.cjs",
+    "certs:load-local": "set SECRET_PROVIDER=local && node scripts/load-certificates.cjs",    "certs:load-letsencrypt": "set SECRET_PROVIDER=letsencrypt && node scripts/load-certificates.cjs",
     "release:test-env": "node scripts/test-environment.cjs",
-    "release:verify": "node scripts/final-verification.cjs"
+    "release:verify": "node scripts/final-verification.cjs",
+    "release:test-versions": "node scripts/test-version-consistency.cjs"
   },
   "keywords": [],
   "author": {

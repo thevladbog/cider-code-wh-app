@@ -33,6 +33,8 @@ export default defineConfig({
     __dirname: 'undefined',
     __filename: 'undefined',
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    // Pass APP_VERSION to the renderer process runtime
+    'process.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION || ''),
   },
   server: {
     host: '127.0.0.1',

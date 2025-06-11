@@ -16,5 +16,7 @@ export default defineConfig({
     __dirname: 'import.meta.dirname',
     // Pass NODE_ENV to the preload process runtime
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    // Pass APP_VERSION to the preload process runtime
+    'process.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION || ''),
   },
 });
