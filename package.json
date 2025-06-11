@@ -1,7 +1,7 @@
 {
   "name": "bottle-code-wh-app",
   "productName": "bottle-code-wh-app",
-  "version": "1.0.38",
+  "version": "1.0.53",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
   "repository": {
@@ -52,7 +52,8 @@
     "test:update": "vitest run --update",
     "test:models": "vitest run tests/models",
     "test:store": "vitest run tests/store",
-    "test:utils": "vitest run tests/utils",    "test:integration": "vitest run tests/integration",
+    "test:utils": "vitest run tests/utils",
+    "test:integration": "vitest run tests/integration",
     "certs:generate-dev": "node scripts/generate-dev-certs.cjs",
     "certs:generate-letsencrypt": "node scripts/generate-letsencrypt-http.cjs",
     "certs:renew": "node scripts/renew-certificates.cjs",
