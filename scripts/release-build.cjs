@@ -234,9 +234,11 @@ function main() {
   // Копирование артефактов
   log('📁', 'Копирование артефактов в папку updates...');
   const copiedFiles = copyArtifactsToUpdates(artifacts, targetVersion);
-
   // Обновление метаданных
   execCommand('node scripts/update-latest-json.cjs', 'Обновление метаданных latest.json');
+
+  // Генерация latest.yml для electron-updater
+  execCommand('node scripts/generate-latest-yml.cjs', 'Генерация latest.yml для electron-updater');
 
   // Создание GitHub Release template
   const templatePath = createGitHubReleaseTemplate(targetVersion, artifacts);

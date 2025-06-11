@@ -10,8 +10,27 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import * as fs from 'fs';
 import * as path from 'path';
-// Загружаем данные пакета для получения версии и других метаданных
+
+// Функция для динамического получения версии
+function getAppVersion(): string {
+  // Сначала пробуем взять версию из переменной окружения (приоритет для CI/CD)
+  if (process.env.APP_VERSION) {
+    return process.env.APP_VERSION;
+  }
+  
+  // Иначе читаем из package.json
+  try {
+    const packageData = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+    return packageData.version;
+  } catch (error) {
+    console.warn('Warning: Could not read package.json, using default version');
+    return '1.0.0';
+  }
+}
+
+// Загружаем данные пакета для получения метаданных
 const packageData = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+const appVersion = getAppVersion();
 
 // Check if certs directory exists before including it
 const certsPath = path.join(__dirname, 'certs');
@@ -53,7 +72,7 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
-      setupExe: `bottle-code-wh-app-${packageData.version}-setup.exe`,
+      setupExe: `bottle-code-wh-app-${appVersion}-setup.exe`,
       noMsi: true,
       // Добавляем иконку для установщика (используем новый ICO файл)
       setupIcon: './src/assets/icon.ico',
@@ -69,7 +88,7 @@ const config: ForgeConfig = {
       // Для MakerZIP нет свойства name, но можно задать через outDir
     }, ['darwin']), 
     new MakerDMG({
-      name: `bottle-c-wh-${packageData.version}`,
+      name: `bottle-c-wh-${appVersion}`,
       // Настройки для DMG
       format: 'ULFO',
       // Добавляем иконку для DMG
